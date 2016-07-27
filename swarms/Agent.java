@@ -6,16 +6,17 @@ import math.geom2d.Vector2D;
 class Agent {
 
   // Time-varying agent parameters
-  private Vector2D pos;         // agent's coordinates
-  private Vector2D vel;         // agent's velocity
-  private Vector2D socialForce; // sum of social forces on agent (in Newtons)
-  private Vector2D myForce;     // agent's own force (in Newtons)
-  private double tLastUpdate, nextUpdateTime;
+  private Vector2D pos;           // agent's coordinates
+  private Vector2D vel;           // agent's velocity (in m/s)
+  private Vector2D socialForce;   // sum of social forces on agent (in Newtons)
+  private Vector2D myForce;       // agent's own force (in Newtons)
+  private double tLastUpdate;     // Simulation time at which agent's update() function was last called
+  private double nextUpdateTime;  // Simulation time at which agent's update() function next needs to be called
 
   // Constant agent-specific parameters
   private final double mass, radius, maxSpeed;
 
-  private final int ID;
+  private final int ID; // Index ID of this agent (0 <= ID < numAgents)
 
   Agent(int ID, Vector2D min, Vector2D max) {
 
@@ -35,20 +36,25 @@ class Agent {
     // Uniformly random valid initial velocity within circle of radius maxSpeed
     vel = Vector2D.createPolar(maxSpeed * rand.nextDouble(), 2.0 * Math.PI * rand.nextDouble());
 
+    socialForce = new Vector2D(0.0, 0.0);
+    myForce = new Vector2D(0.0, 0.0);
+    tLastUpdate = 0.0;
+
   }
 
-  public int getID() {
+  int getID() {
     return ID;
   }
 
   // Moves and accelerates the agent, updating its priority
   // It is crucial for synchrony that the Agent is removed and re-inserted
   // into the PriorityQueue whenever update() is called!
-  public void update(double time, double maxMove) {
+  void update(double t, double maxMove) {
     updateIndividualForce();
-    accelerate(time, maxMove);
-    move(time);
-    tLastUpdate = time;
+    accelerate(t);
+    move(t);
+    tLastUpdate = t;
+    setNextUpdateTime(t + (maxMove / getSpeed()));
   }
 
   // Agent position is needed to compute social forces and for plotting
@@ -73,21 +79,22 @@ class Agent {
 
   // It is crucial for synchrony that this is the only function allowed to
   // change nextUpdateTime!
-  private void accelerate(double time, double maxMove) {
+  private void accelerate(double time) {
     vel = vel.plus(socialForce.plus(myForce).times((time - tLastUpdate)/mass));
 
     // Make sure speed is at most maxSpeed
     if (getSpeed() > maxSpeed) vel = vel.normalize().times(maxSpeed);
- 
-    nextUpdateTime = maxMove / getSpeed() + time;
 
   }
-
 
   // TODO: Design mechanics for individuals to choose their desired paths
   private void updateIndividualForce() {
     // For now, always move to the right
     myForce = new Vector2D(1.0, 0.0);
+  }
+
+  void setNextUpdateTime(double nextUpdateTime) {
+    this.nextUpdateTime = nextUpdateTime;
   }
 
   double getNextUpdateTime() {
@@ -97,7 +104,7 @@ class Agent {
   /**
    * @return the current speed (i.e., norm of the velocity) of the agent
    */
-  private double getSpeed() {
+  double getSpeed() {
     return vel.norm();
   }
 
