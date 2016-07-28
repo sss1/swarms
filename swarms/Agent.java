@@ -1,5 +1,6 @@
 package swarms;
 
+import java.util.Comparator;
 import java.util.Random;
 import math.geom2d.Vector2D;
 
@@ -110,6 +111,15 @@ class Agent {
 
   public double getTLastUpdate() {
     return tLastUpdate;
+  }
+
+}
+
+class AgentComparator implements Comparator<Agent> {
+
+  @Override
+  public int compare(Agent a1, Agent a2) {
+    return (a1.getNextUpdateTime() < a2.getNextUpdateTime()) ? -1 : 1;
   }
 
 }
