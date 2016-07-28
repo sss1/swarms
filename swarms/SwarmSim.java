@@ -1,6 +1,8 @@
 package swarms;
 
 import math.geom2d.Point2D;
+import math.geom2d.line.LineSegment2D;
+
 import java.util.PriorityQueue;
 
 public class SwarmSim {
@@ -10,15 +12,52 @@ public class SwarmSim {
   private static final int numAgents = 100;
   private static final Point2D min = new Point2D(0.0, 0.0); // Bottom left of rectangle in which agents start
   private static final Point2D max = new Point2D(50.0, 50.0); // Top right of rectangle in which agents start
-  private static final double maxMove = 1.0; // Maximum distance an agent can move before needing to be updated
-  private static final double frameRate = 1.0; // Rate at which to save frames for plotting
+  private static final double maxMove = 1.0;    // Maximum distance an agent can move before needing to be updated
+  private static final double frameRate = 1.0;  // Rate at which to save frames for plotting
+  private static final double fineness = 0.5;   // Resolution at which to model the room as a graph
+
+  // Simulation state variables
+  private static Agent[] agents;
+  private static PriorityQueue<Agent> orderedAgents;
+  private static Room room;
 
   public static void main(String[] args) {
 
-    Agent[] agents = new Agent[numAgents];
+    initializeAgents();
+    initializeRoom();
+
+    // Start running the simulation
+    double t = 0.0;
+    Plotter plotter = new Plotter(frameRate, agents, room);
+    while (t < simDuration) {
+
+      // Get next agent to update from PriorityQueue
+      Agent nextAgent = orderedAgents.poll();
+      t = nextAgent.getNextUpdateTime();
+
+      // Calculate forces, accelerate, move the agent, and update its priority
+      nextAgent.update(t, maxMove);
+
+      // Add new social forces to appropriate agents
+      updateSocialForces(agents, nextAgent.getID());
+
+      // Reinsert the agent back into the priority queue
+      orderedAgents.add(nextAgent);
+
+      if (t > plotter.getNextFrameTime()) {
+        plotter.saveFrame(agents, room);
+      }
+
+    }
+
+  }
+
+  private static void initializeAgents() {
+
+    agents = new Agent[numAgents];
 
     // Store all the agents sorted by order in which they need to be next updated
-    PriorityQueue<Agent> orderedAgents = new PriorityQueue<>(numAgents, new AgentComparator());
+    orderedAgents = new PriorityQueue<>(numAgents, new AgentComparator());
 
     // Initialize the agents
     for (int i = 0; i < numAgents; i++) {
@@ -29,38 +68,14 @@ public class SwarmSim {
 
     }
 
-    // Start running the simulation
-    double t = 0.0;
-    Plotter plotter = new Plotter(agents, frameRate);
-    while (t < simDuration) {
+  }
 
-      // Get next agent to update from PriorityQueue
-      Agent nextAgent = orderedAgents.poll();
-      t = nextAgent.getNextUpdateTime();
-      // Point2D oldPos = nextAgent.getPos(); // TEMP FOR PRINTING
+  private static void initializeRoom() {
 
-      // Calculate forces, accelerate, move the agent, and update its priority
-      nextAgent.update(t, maxMove);
+    room = new Room(min, max, fineness);
 
-      // Add new social forces to appropriate agents
-      updateSocialForces(agents, nextAgent.getID());
-
-      // System.out.println("Moved agent " + nextAgent.getID() + " from " + oldPos + " to " + nextAgent.getPos() + " at time t = " + t + ".");
-
-      // Reinsert the agent back into the priority queue
-      orderedAgents.add(nextAgent);
-
-      if (t > plotter.getNextFrameTime()) {
-        plotter.saveFrame(agents);
-      }
-
-//      // For now, slow down sim for readability
-//      try {
-//        Thread.sleep(500);
-//      } catch (InterruptedException e) {
-//        e.printStackTrace();
-//      }
-    }
+    // TODO: Add some walls and other more interesting structure
+    room.addWall(new LineSegment2D(25.0, 10.0, 25.0, 40.0));
 
   }
 

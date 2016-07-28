@@ -12,16 +12,14 @@ import java.util.Set;
  * A room is modeled as a grid-shaped graph. Walls can be simulated by removing edges.
  * Created by sss1 on 7/28/16.
  */
-public class Room {
+class Room {
 
   private Graph<Cell, CellEdge> roomGraph;
-  private int nCellsX, nCellsY;
-  private Point2D min, max; // Coordinates of the bottom-left and top-right corners of the room
 
-  public Room(Point2D min, Point2D max, double fineness) {
+  Room(Point2D min, Point2D max, double fineness) {
 
-    nCellsX = 1 + ((int) ((max.x() - min.x()) / fineness));
-    nCellsY = 1 + ((int) ((max.y() - min.y()) / fineness));
+    int nCellsX = 1 + ((int) ((max.x() - min.x()) / fineness));
+    int nCellsY = 1 + ((int) ((max.y() - min.y()) / fineness));
 
     roomGraph = new SimpleGraph<>(CellEdge.class);
 
@@ -30,21 +28,28 @@ public class Room {
     for (int i = 0; i < nCellsX; i++) {
       for (int j = 0; j < nCellsY; j++) {
 
+        System.out.println("Adding edges for node at (" + i + ", " + j + ").");
+
         double x = min.x() + i * fineness;
         double y = min.y() + j * fineness;
-        grid[i][j] = new Cell(x, y);
+        Cell here = new Cell(x, y);
+        grid[i][j] = here;
         roomGraph.addVertex(grid[i][j]);
         if (i > 0 && j > 0) {
-          roomGraph.addEdge(grid[i][j], grid[i - 1][j - 1]); // add edge to top-left
+          Cell topLeft = grid[i - 1][j - 1];
+          roomGraph.addEdge(here, topLeft, new CellEdge(here, topLeft)); // add edge to top-left
         }
         if (i > 0) {
-          roomGraph.addEdge(grid[i][j], grid[i - 1][j]); // add edge to left
+          Cell left = grid[i - 1][j];
+          roomGraph.addEdge(here, left, new CellEdge(here, left)); // add edge to left
         }
         if (i > 0 && j < nCellsY - 2) {
-          roomGraph.addEdge(grid[i][j], grid[i - 1][j + 1]); // add edge to bottom-left
+          Cell bottomLeft = grid[i - 1][j + 1];
+          roomGraph.addEdge(here, bottomLeft, new CellEdge(here, bottomLeft)); // add edge to bottom-left
         }
-        if (i > 0) {
-          roomGraph.addEdge(grid[i][j], grid[i][j - 1]); // add edge to top
+        if (j > 0) {
+          Cell top = grid[i][j - 1];
+          roomGraph.addEdge(here, top, new CellEdge(here, top)); // add edge to top
         }
       }
 
@@ -55,7 +60,7 @@ public class Room {
   /**
    * Simulates a wall by removing any edges that cross the line segment between the two input points
    */
-  public void addWall(LineSegment2D wall) {
+  void addWall(LineSegment2D wall) {
 
     Set<CellEdge> toRemove = new HashSet<>();
 
@@ -96,7 +101,7 @@ public class Room {
 
     private final LineSegment2D lineSegment;
 
-    public CellEdge(Cell c1, Cell c2) {
+    CellEdge(Cell c1, Cell c2) {
       this.lineSegment = new LineSegment2D(c1.getCoordinates(), c2.getCoordinates());
     }
 
