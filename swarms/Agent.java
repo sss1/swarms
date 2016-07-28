@@ -2,12 +2,14 @@ package swarms;
 
 import java.util.Comparator;
 import java.util.Random;
+
+import math.geom2d.Point2D;
 import math.geom2d.Vector2D;
 
 class Agent {
 
   // Time-varying agent parameters
-  private Vector2D pos;           // agent's coordinates
+  private Point2D pos;           // agent's coordinates
   private Vector2D vel;           // agent's velocity (in m/s)
   private Vector2D socialForce;   // sum of social forces on agent (in Newtons)
   private Vector2D myForce;       // agent's own force (in Newtons)
@@ -19,7 +21,7 @@ class Agent {
 
   private final int ID; // Index ID of this agent (0 <= ID < numAgents)
 
-  Agent(int ID, Vector2D min, Vector2D max) {
+  Agent(int ID, Point2D min, Point2D max) {
 
     this.ID = ID;
 
@@ -32,7 +34,7 @@ class Agent {
 
     // Uniformly random valid initial position within rectangle determined by
     // inputs
-    pos = min.plus(max.minus(min).times(rand.nextDouble()));
+    pos = new Point2D(min.x() + (max.x() - min.x()) * rand.nextDouble(), min.y() + (max.y() - min.y()) * rand.nextDouble());
 
     // Uniformly random valid initial velocity within circle of radius maxSpeed
     vel = Vector2D.createPolar(maxSpeed * rand.nextDouble(), 2.0 * Math.PI * rand.nextDouble());
@@ -59,7 +61,7 @@ class Agent {
   }
 
   // Agent position is needed to compute social forces and for plotting
-  Vector2D getPos() {
+  Point2D getPos() {
     return pos;
   }
 
@@ -107,10 +109,6 @@ class Agent {
    */
   double getSpeed() {
     return vel.norm();
-  }
-
-  public double getTLastUpdate() {
-    return tLastUpdate;
   }
 
 }
