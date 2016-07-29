@@ -28,8 +28,6 @@ class Room {
     for (int i = 0; i < nCellsX; i++) {
       for (int j = 0; j < nCellsY; j++) {
 
-        System.out.println("Adding edges for node at (" + i + ", " + j + ").");
-
         double x = min.x() + i * fineness;
         double y = min.y() + j * fineness;
         Cell here = new Cell(x, y);
@@ -74,6 +72,17 @@ class Room {
 
   }
 
+  double[][] getAsArray() {
+    Set<CellEdge> edgeSet = roomGraph.edgeSet();
+    double[][] asArray = new double[edgeSet.size()][4];
+    int nextIdx = 0;
+    for (CellEdge e : edgeSet ) {
+      asArray[nextIdx] = e.getAsArray();
+      nextIdx++;
+    }
+    return asArray;
+  }
+
   /**
    * A single ``grid cell'' of the room
    */
@@ -100,13 +109,26 @@ class Room {
   private class CellEdge {
 
     private final LineSegment2D lineSegment;
+    private final Cell c1, c2;
 
     CellEdge(Cell c1, Cell c2) {
+      this.c1 = c1;
+      this.c2 = c2;
       this.lineSegment = new LineSegment2D(c1.getCoordinates(), c2.getCoordinates());
     }
 
     LineSegment2D asLineSegment() {
       return lineSegment;
+    }
+
+    /**
+     * @return length-4 array with coordinates of c1 and c2
+     */
+    double[] getAsArray() {
+      return new double[]{  c1.getCoordinates().x(),
+                            c1.getCoordinates().y(),
+                            c2.getCoordinates().x(),
+                            c2.getCoordinates().y() };
     }
 
   }
