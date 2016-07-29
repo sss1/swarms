@@ -16,6 +16,9 @@ class Agent {
   private double tLastUpdate;     // Simulation time at which agent's update() function was last called
   private double nextUpdateTime;  // Simulation time at which agent's update() function next needs to be called
 
+  // Constant parameters
+  private final double forceDecayConstant = 10.0; // Rate at which earlier social forces decay
+
   // Constant agent-specific parameters
   private final double mass, radius, maxSpeed;
 
@@ -37,7 +40,7 @@ class Agent {
     pos = new Point2D(min.x() + (max.x() - min.x()) * rand.nextDouble(), min.y() + (max.y() - min.y()) * rand.nextDouble());
 
     // Uniformly random valid initial velocity within circle of radius maxSpeed
-    vel = Vector2D.createPolar(maxSpeed * rand.nextDouble(), 2.0 * Math.PI * rand.nextDouble());
+    vel = Vector2D.createPolar((maxSpeed / 5.0) * rand.nextDouble(), 2.0 * Math.PI * rand.nextDouble());
 
     socialForce = new Vector2D(0.0, 0.0);
     myForce = new Vector2D(0.0, 0.0);
@@ -75,7 +78,8 @@ class Agent {
     return radius;
   }
 
-  // Internal methods implementing motion mechanics
+  // Update the position of the agent, based on their velocity and the time since their last update
+  // TODO: Check for walls! If an agent's movement goes through a wall, truncate it!
   private void move(double time) {
     pos = pos.plus(vel.times(time - tLastUpdate));
   }
@@ -83,17 +87,22 @@ class Agent {
   // It is crucial for synchrony that this is the only function allowed to
   // change nextUpdateTime!
   private void accelerate(double time) {
-    vel = vel.plus(socialForce.plus(myForce).times((time - tLastUpdate)/mass));
+    double timeSinceUpdate = time - tLastUpdate;
+    Vector2D acc = myForce.plus(socialForce).times(1/mass);
+    vel = vel.plus(acc.times(timeSinceUpdate));
 
     // Make sure speed is at most maxSpeed
     if (getSpeed() > maxSpeed) vel = vel.normalize().times(maxSpeed);
+
+    // Let earlier social forces decay over time, once they have been incorporated into the velocity
+    socialForce = socialForce.times(Math.exp(-forceDecayConstant*timeSinceUpdate));
 
   }
 
   // TODO: Design mechanics for individuals to choose their desired paths
   private void updateIndividualForce() {
     // For now, always move to the right
-    myForce = new Vector2D(1.0, 0.0);
+    myForce = new Vector2D(-7*pos.x()/Math.abs(pos.x()), -7*pos.y()/Math.abs(pos.y()));
   }
 
   void setNextUpdateTime(double nextUpdateTime) {

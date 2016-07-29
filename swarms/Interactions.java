@@ -8,8 +8,8 @@ class Interactions {
   // Interaction parameters:
   //    Pushing parameters:
   private static final double compressiveTolerance = 1.0; // Increase this to reduce how much repulsion increases with proximity
-  private static final double repulsionStrength = 1.0; // Scalar weight of interpersonal repulsion term
-  private static final double frictionStrength = 0.5; // Scalar weight of interpersonal friction term
+  private static final double repulsionStrength = 10.0; // Scalar weight of interpersonal repulsion term
+  private static final double frictionStrength = 1.0; // Scalar weight of interpersonal friction term
   //    Attraction parameters: TODO
   //    Orientation parameters: TODO
 

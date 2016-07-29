@@ -8,12 +8,12 @@ import java.util.PriorityQueue;
 public class SwarmSim {
 
   // Simulation parameters
-  private static final double simDuration = 100.0; // Time (in seconds) to simulate
-  private static final int numAgents = 100;
+  private static final double simDuration = 500.0; // Time (in seconds) to simulate
+  private static final int numAgents = 30;
   private static final Point2D min = new Point2D(0.0, 0.0); // Bottom left of rectangle in which agents start
   private static final Point2D max = new Point2D(50.0, 50.0); // Top right of rectangle in which agents start
   private static final double maxMove = 0.1;    // Maximum distance an agent can move before needing to be updated
-  private static final double frameRate = 1.0;  // Rate at which to save frames for plotting
+  private static final double frameRate = 0.5;  // Rate at which to save frames for plotting
   private static final double fineness = 0.5;   // Resolution at which to model the room as a graph
   private static final String outputPath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
 
