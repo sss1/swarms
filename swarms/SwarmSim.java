@@ -12,9 +12,10 @@ public class SwarmSim {
   private static final int numAgents = 100;
   private static final Point2D min = new Point2D(0.0, 0.0); // Bottom left of rectangle in which agents start
   private static final Point2D max = new Point2D(50.0, 50.0); // Top right of rectangle in which agents start
-  private static final double maxMove = 1.0;    // Maximum distance an agent can move before needing to be updated
+  private static final double maxMove = 0.1;    // Maximum distance an agent can move before needing to be updated
   private static final double frameRate = 1.0;  // Rate at which to save frames for plotting
   private static final double fineness = 0.5;   // Resolution at which to model the room as a graph
+  private static final String outputPath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
 
   // Simulation state variables
   private static Agent[] agents;
@@ -39,16 +40,18 @@ public class SwarmSim {
       nextAgent.update(t, maxMove);
 
       // Add new social forces to appropriate agents
-      updateSocialForces(agents, nextAgent.getID());
+      updateSocialForces(agents, nextAgent);
 
       // Reinsert the agent back into the priority queue
       orderedAgents.add(nextAgent);
 
       if (t > plotter.getNextFrameTime()) {
-        plotter.saveFrame(agents, room);
+        plotter.saveFrame(agents);
       }
 
     }
+
+    plotter.writeToMAT(outputPath);
 
   }
 
@@ -73,8 +76,6 @@ public class SwarmSim {
   private static void initializeRoom() {
 
     room = new Room(min, max, fineness);
-
-    // TODO: Add some walls and other more interesting structure
     room.addWall(new LineSegment2D(25.0, 10.0, 25.0, 40.0));
 
   }
@@ -85,15 +86,15 @@ public class SwarmSim {
    * @param agents array of all agents, sorted by ID
    * @param updatedAgent ID of the agent that was just updated
    */
-  private static void updateSocialForces(Agent[] agents, int updatedAgent) {
+  private static void updateSocialForces(Agent[] agents, Agent updatedAgent) {
 
     for (int i = 0; i < agents.length; i++) {
 
-      if (i == updatedAgent) { continue; } // no self-interactions
+      if (i == updatedAgent.getID()) { continue; } // no self-interactions
 
-      if (Interactions.collision(agents[i], agents[updatedAgent])) {
-          // TODO: Update social forces
-          System.out.println("Agents " + i + " and " + updatedAgent + " collided!");
+      if (Interactions.collision(agents[i], updatedAgent)) {
+          // TODO: Add other social forces
+        Interactions.push(updatedAgent, agents[i]);
       }
     }
 
