@@ -29,7 +29,7 @@ class Agent {
 
     // These are somewhat arbitrary ranges, for now
     mass = 65.0 + 10.0 * rand.nextDouble(); // 65-75
-    radius = 0.4 + (0.2 * rand.nextDouble()); // 0.4-0.6
+    radius = 0.25 + (0.1 * rand.nextDouble()); // 0.25-0.35
     maxSpeed = 1.0 + 3.0 * rand.nextDouble(); // 1-4
 
     // Uniformly random valid initial position within rectangle determined by
@@ -66,7 +66,7 @@ class Agent {
   }
 
   // Adds a new social acting upon the agent (e.g., due to a new collision).
-  public void addForce(Vector2D newForce) {
+  void addForce(Vector2D newForce) {
     socialForce = socialForce.plus(newForce);
   }
 
@@ -109,6 +109,13 @@ class Agent {
    */
   double getSpeed() {
     return vel.norm();
+  }
+
+  /**
+   * @return the current velocity of the agent
+   */
+  Vector2D getVel() {
+    return vel;
   }
 
 }
