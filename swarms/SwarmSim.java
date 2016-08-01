@@ -66,7 +66,7 @@ public class SwarmSim {
     for (int i = 0; i < numAgents; i++) {
       agents[i] = new Agent(i, min, max);
 
-      agents[i].setNextUpdateTime(maxMove / agents[i].getSpeed());
+      agents[i].setNextUpdateTime(Math.min(maxMove / agents[i].getSpeed(), frameRate));
       orderedAgents.add(agents[i]);
 
     }
