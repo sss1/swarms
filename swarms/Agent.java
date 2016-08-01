@@ -108,6 +108,11 @@ class Agent {
     pos = pos.plus(move);
   }
 
+  /**
+   * @param path line segment from current position to hypothetical next position
+   * @param walls a collection of all walls in the room
+   * @return first wall with which the agent's current movement would collide, or null if there is no such wall
+   */
   private LineSegment2D getCollidingWall(LineSegment2D path, Collection<LineSegment2D> walls) {
     LineSegment2D collidingWall = null;
     double distanceToCollidingWall = Double.POSITIVE_INFINITY;
