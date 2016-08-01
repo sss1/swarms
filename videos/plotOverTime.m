@@ -20,4 +20,8 @@ for t = 1:nTimes
   axis([xMin xMax yMin yMax]);
   pause(0.01);
 
+  for wall_idx = 1:size(walls, 1)
+    plot(walls(wall_idx, [1 3]), walls(wall_idx, [2 4]));
+  end
+
 end
