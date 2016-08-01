@@ -18,6 +18,7 @@ class Plotter {
 
   private ArrayList<Point2D[]> positions;
   private double[][] room;
+  private double[][] walls;
   private final double[] radii;
   private final double frameRate;
   private double nextFrameTime;
@@ -31,6 +32,7 @@ class Plotter {
     positions = new ArrayList<>();
     nextFrameTime = 0.0;
     this.room = room.getAsArray();
+    this.walls = room.getWallsAsArray();
     saveFrame(agents);
   }
 
@@ -78,15 +80,15 @@ class Plotter {
     variableList.add(new MLDouble("positionsY", positionsYAsArray));
 
     variableList.add(new MLDouble("room", room));
+    variableList.add(new MLDouble("walls", walls));
     variableList.add(new MLDouble("radii", radii, radii.length));
 
     try {
       new MatFileWriter(filepath, variableList);
+      System.out.println("Saved results to file: " + filepath);
     } catch (IOException e) {
       e.printStackTrace();
     }
-
-    System.out.println("Saved results to file: " + filepath);
 
   }
 

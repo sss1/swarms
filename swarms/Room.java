@@ -5,6 +5,7 @@ import math.geom2d.line.LineSegment2D;
 import org.jgrapht.Graph;
 import org.jgrapht.graph.SimpleGraph;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -15,6 +16,7 @@ import java.util.Set;
 class Room {
 
   private Graph<Cell, CellEdge> roomGraph;
+  private ArrayList<LineSegment2D> walls;
 
   Room(Point2D min, Point2D max, double fineness) {
 
@@ -51,6 +53,8 @@ class Room {
         }
       }
 
+      walls = new ArrayList<>();
+
     }
 
   }
@@ -59,6 +63,8 @@ class Room {
    * Simulates a wall by removing any edges that cross the line segment between the two input points
    */
   void addWall(LineSegment2D wall) {
+
+    walls.add(wall);
 
     Set<CellEdge> toRemove = new HashSet<>();
 
@@ -72,6 +78,11 @@ class Room {
 
   }
 
+  /**
+   * Encodes the graph of the room as a 2D array of size numEdges X 4, for saving in a .mat file.
+   * Each row is an edge, and the columns correspond to (x1, y1, x2, y2).
+   * @return a 2D array encoding of the walls in the room
+   */
   double[][] getAsArray() {
     Set<CellEdge> edgeSet = roomGraph.edgeSet();
     double[][] asArray = new double[edgeSet.size()][4];
@@ -84,24 +95,34 @@ class Room {
   }
 
   /**
+   * Encodes the walls in the room as a 2D array of size numWalls X 4, for saving in a .mat file.
+   * Each row is a wall, and the columns correspond to (x1, y1, x2, y2).
+   * @return a 2D array encoding of the walls in the room
+   */
+  double[][] getWallsAsArray() {
+    double[][] wallsAsArray = new double[walls.size()][4];
+    for (int i = 0; i < walls.size(); i++) {
+      wallsAsArray[i] = new double[]{   walls.get(i).firstPoint().x(),
+                                        walls.get(i).firstPoint().y(),
+                                        walls.get(i).lastPoint().x(),
+                                        walls.get(i).lastPoint().y() };
+    }
+    return wallsAsArray;
+  }
+
+  /**
    * A single ``grid cell'' of the room
    */
   private class Cell {
 
     private final Point2D coordinates; // location of the cell
-    private Set<Agent> agents; // all agents inside this cell
 
     Cell(double x, double y) {
       coordinates = new Point2D(x, y);
-      agents = new HashSet<>();
     }
 
     Point2D getCoordinates() {
       return coordinates;
-    }
-
-    Set<Agent> getAgents() {
-      return agents;
     }
 
   }
