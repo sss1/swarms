@@ -77,6 +77,10 @@ class Room {
     roomGraph.removeAllEdges(toRemove);
 
   }
+  ArrayList<LineSegment2D> getWalls() {
+    return walls;
+  }
+
 
   /**
    * Encodes the graph of the room as a 2D array of size numEdges X 4, for saving in a .mat file.

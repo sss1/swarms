@@ -1,10 +1,12 @@
 package swarms;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Random;
 
 import math.geom2d.Point2D;
 import math.geom2d.Vector2D;
+import math.geom2d.line.LineSegment2D;
 
 class Agent {
 
@@ -55,10 +57,10 @@ class Agent {
   // Moves and accelerates the agent, updating its priority
   // It is crucial for synchrony that the Agent is removed and re-inserted
   // into the PriorityQueue whenever update() is called!
-  void update(double t, double maxMove) {
+  void update(double t, double maxMove, Room room) {
     updateIndividualForce();
     accelerate(t);
-    move(t);
+    move(t, room.getWalls());
     tLastUpdate = t;
     setNextUpdateTime(t + (maxMove / getSpeed()));
   }
@@ -78,10 +80,45 @@ class Agent {
     return radius;
   }
 
-  // Update the position of the agent, based on their velocity and the time since their last update
-  // TODO: Check for walls! If an agent's movement goes through a wall, truncate it!
-  private void move(double time) {
-    pos = pos.plus(vel.times(time - tLastUpdate));
+  /**
+   * Update the position of the agent, based on their velocity and the time since their last update,
+   * truncating their movement and velocity based on any walls in the way
+   * @param time the time at which the move occurs
+   * @param walls a collection of all walls in the room
+   */
+  private void move(double time, Collection<LineSegment2D> walls) {
+
+    // Figure out if the agent will collide with a wall this move
+    Point2D nextPos = pos.plus(vel.times(time - tLastUpdate)); // hypothetical next position, if there were no walls
+    nextPos = nextPos.plus(vel.normalize().times(radius)); // extend path to account for positive radius
+    LineSegment2D path = new LineSegment2D(pos, nextPos);
+    LineSegment2D collidingWall = getCollidingWall(path, walls);
+
+    // Move the agent
+    Vector2D move;
+    if (collidingWall == null) { // no collision with wall; move normally
+      move = vel.times(time - tLastUpdate);
+    } else { // truncate movement and velocity due to collision with wall
+      move = new Vector2D(pos, LineSegment2D.getIntersection(collidingWall, path));
+      move = move.times((move.norm() - radius)/move.norm()); // shorten move to account for positive radius
+      Vector2D wallAsVector = new Vector2D(collidingWall.firstPoint(), collidingWall.lastPoint()).normalize();
+      // replace the velocity with its part parallel to the wall; i.e., kill its normal part
+      vel = wallAsVector.times(Vector2D.dot(vel, wallAsVector));
+    }
+    pos = pos.plus(move);
+  }
+
+  private LineSegment2D getCollidingWall(LineSegment2D path, Collection<LineSegment2D> walls) {
+    LineSegment2D collidingWall = null;
+    double distanceToCollidingWall = Double.POSITIVE_INFINITY;
+    for (LineSegment2D wall : walls) {
+      if (LineSegment2D.intersects(wall, path) &&
+          Point2D.distance(pos, LineSegment2D.getIntersection(wall, path)) < distanceToCollidingWall) {
+        distanceToCollidingWall = Point2D.distance(pos, LineSegment2D.getIntersection(wall, path));
+        collidingWall = wall;
+      }
+    }
+    return collidingWall;
   }
 
   // It is crucial for synchrony that this is the only function allowed to
@@ -101,7 +138,7 @@ class Agent {
 
   // TODO: Design mechanics for individuals to choose their desired paths
   private void updateIndividualForce() {
-    // For now, always move to the right
+    // For now, always move to the origin
     myForce = new Vector2D(-7*pos.x()/Math.abs(pos.x()), -7*pos.y()/Math.abs(pos.y()));
   }
 
