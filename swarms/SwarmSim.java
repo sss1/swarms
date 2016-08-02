@@ -37,7 +37,7 @@ public class SwarmSim {
       t = nextAgent.getNextUpdateTime();
 
       // Calculate forces, accelerate, move the agent, and update its priority
-      nextAgent.update(t, maxMove);
+      nextAgent.update(t, maxMove, room);
 
       // Add new social forces to appropriate agents
       updateSocialForces(agents, nextAgent);
