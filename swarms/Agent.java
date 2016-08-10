@@ -58,7 +58,7 @@ class Agent {
   // It is crucial for synchrony that the Agent is removed and re-inserted
   // into the PriorityQueue whenever update() is called!
   void update(double t, double maxMove, Room room) {
-    updateIndividualForce();
+    updateIndividualForce(room);
     accelerate(t);
     move(t, room.getWalls());
     tLastUpdate = t;
@@ -142,9 +142,11 @@ class Agent {
   }
 
   // TODO: Design mechanics for individuals to choose their desired paths
-  private void updateIndividualForce() {
-    // For now, always move to the origin
-    myForce = new Vector2D(-7*pos.x()/Math.abs(pos.x()), -7*pos.y()/Math.abs(pos.y()));
+  // For now, we should label certain cells as exits, and have agents push towards those
+  private void updateIndividualForce(Room room) {
+    myForce = room.getGradient(pos);
+//    // For now, always move to the origin
+//    myForce = new Vector2D(-7*pos.x()/Math.abs(pos.x()), -7*pos.y()/Math.abs(pos.y()));
   }
 
   void setNextUpdateTime(double nextUpdateTime) {

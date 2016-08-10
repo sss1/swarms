@@ -1,11 +1,17 @@
 package swarms;
 
 import math.geom2d.Point2D;
+import math.geom2d.Vector2D;
 import math.geom2d.line.LineSegment2D;
 import org.jgrapht.Graph;
+import org.jgrapht.Graphs;
+import org.jgrapht.event.TraversalListenerAdapter;
+import org.jgrapht.event.VertexTraversalEvent;
 import org.jgrapht.graph.SimpleGraph;
+import org.jgrapht.traverse.BreadthFirstIterator;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -17,15 +23,24 @@ class Room {
 
   private Graph<Cell, CellEdge> roomGraph;
   private ArrayList<LineSegment2D> walls;
+  private ArrayList<Cell> exits;
+  private final double fineness;
+  private final Point2D min;
+  private final Cell[][] grid;
+  private final Cell outside;
+
 
   Room(Point2D min, Point2D max, double fineness) {
+
+    this.min = min;
+    this.fineness = fineness;
 
     int nCellsX = 1 + ((int) ((max.x() - min.x()) / fineness));
     int nCellsY = 1 + ((int) ((max.y() - min.y()) / fineness));
 
     roomGraph = new SimpleGraph<>(CellEdge.class);
 
-    Cell[][] grid = new Cell[nCellsX][nCellsY]; // Temporary organization for easily adding grid edges
+    grid = new Cell[nCellsX][nCellsY]; // Temporary organization for easily adding grid edges
 
     for (int i = 0; i < nCellsX; i++) {
       for (int j = 0; j < nCellsY; j++) {
@@ -53,9 +68,17 @@ class Room {
         }
       }
 
-      walls = new ArrayList<>();
 
     }
+
+    outside = new Cell(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
+
+    exits = new ArrayList<>();
+    System.out.println(grid[nCellsX - 1][(nCellsY - 1)/2]);
+    exits.add(grid[nCellsX - 1][(nCellsY - 1)/2]);
+    updateExitDistances();
+
+    walls = new ArrayList<>();
 
   }
 
@@ -98,6 +121,51 @@ class Room {
     return asArray;
   }
 
+  Vector2D getGradient(Point2D position) {
+    Cell currentCell = getCellFromPosition(position);
+
+    Vector2D gradient = new Vector2D(0.0, 0.0);
+    Collection<Cell> neighbors = Graphs.neighborListOf(roomGraph, currentCell);
+    for (Cell neighbor : neighbors) {
+      // diffDistance is positive if the neighbor is closer to the exit than the current cell, and negative otherwise
+      double diffDistance = currentCell.getDistToExit() - neighbor.getDistToExit();
+      gradient = gradient.plus((new Vector2D(currentCell.getCoordinates(), neighbor.getCoordinates())).times(diffDistance));
+    }
+    // System.out.println("Detected gradient " + gradient + " at position " + position + " with " + neighbors.size() + " neighbors");
+    return gradient.times(1.0/neighbors.size());
+  }
+
+  /**
+   * Labels each cell with its distance to the nearest exit
+   */
+  private void updateExitDistances() {
+    // For each exit, do a BFS. Upon reaching a vertex, set its distance to the minimum distance through each of its
+    // neighboring vertices.
+    for (Cell exit : exits) {
+      BreadthFirstIterator<Cell, CellEdge>  iterator = new BreadthFirstIterator<>(roomGraph, exit);
+      iterator.addTraversalListener(new labelingTraversalListener());
+      while (iterator.hasNext()) { iterator.next(); }
+    }
+  }
+
+  private Cell getCellFromPosition(Point2D position) {
+    int idxX = (int) ((position.x() - min.x()) / fineness);
+    if (idxX < 0 || idxX >= grid.length) {
+      return outside;
+    }
+    int idxY = (int) ((position.y() - min.y()) / fineness);
+    if (idxY < 0 || idxY >= grid[0].length) {
+      return outside;
+    }
+    return grid[idxX][idxY];
+//    try {
+//      return grid[idxX][idxY];
+//    } catch (ArrayIndexOutOfBoundsException) {
+//      System.out.println("An agent left the room.");
+//      return outside;
+//    }
+  }
+
   /**
    * Encodes the walls in the room as a 2D array of size numWalls X 4, for saving in a .mat file.
    * Each row is a wall, and the columns correspond to (x1, y1, x2, y2).
@@ -120,13 +188,36 @@ class Room {
   private class Cell {
 
     private final Point2D coordinates; // location of the cell
+    private double distToExit;
 
     Cell(double x, double y) {
       coordinates = new Point2D(x, y);
+      distToExit = Double.POSITIVE_INFINITY;
+    }
+
+    /**
+     * Two non-null Cells are equal if they occupy the same coordinate (i.e., if
+     * their distance is strictly less than fineness).
+     * @param obj Cell to which to test equality with this
+     * @return true if this and obj are equal
+     */
+    @Override
+    public boolean equals(Object obj) {
+      return obj != null &&
+          getClass() == obj.getClass() &&
+          Point2D.distance(this.getCoordinates(), ((Cell) obj).getCoordinates()) < fineness / 10.0;
     }
 
     Point2D getCoordinates() {
       return coordinates;
+    }
+
+    double getDistToExit() {
+      return distToExit;
+    }
+
+    void setDistToExit(double distToExit) {
+      this.distToExit = distToExit;
     }
 
   }
@@ -154,6 +245,24 @@ class Room {
                             c1.getCoordinates().y(),
                             c2.getCoordinates().x(),
                             c2.getCoordinates().y() };
+    }
+
+  }
+
+  private class labelingTraversalListener extends TraversalListenerAdapter<Cell, CellEdge> {
+
+    @Override
+    public void vertexTraversed(VertexTraversalEvent<Cell> e) {
+      Cell cell = e.getVertex();
+      if (exits.contains(cell)) { // base case: all exists are distance 0.0 from exit
+        cell.setDistToExit(0.0);
+      } else { // otherwise, distance is based on the neighboring cell that is closest to an exit
+        for (Cell neighbor : Graphs.neighborListOf(roomGraph, cell)) {
+          double distanceThroughNeighbor = neighbor.getDistToExit() +
+              Point2D.distance(cell.getCoordinates(), neighbor.getCoordinates());
+          cell.setDistToExit(Math.min(cell.getDistToExit(), distanceThroughNeighbor));
+        }
+      }
     }
 
   }
