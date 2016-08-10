@@ -1,6 +1,7 @@
 package swarms;
 
 import math.geom2d.Point2D;
+import math.geom2d.Vector2D;
 import math.geom2d.line.LineSegment2D;
 
 import java.util.PriorityQueue;
@@ -10,12 +11,15 @@ public class SwarmSim {
   // Simulation parameters
   private static final double simDuration = 500.0; // Time (in seconds) to simulate
   private static final int numAgents = 30;
-  private static final Point2D min = new Point2D(0.0, 0.0); // Bottom left of rectangle in which agents start
-  private static final Point2D max = new Point2D(50.0, 50.0); // Top right of rectangle in which agents start
+  private static final Point2D agentMin = new Point2D(0.0, 0.0);    // Bottom left of rectangle in which agents start
+  private static final Point2D agentMax = new Point2D(50.0, 500.0); // Top right of rectangle in which agents start
+  private static final Point2D min = new Point2D(0.0, 0.0);         // Bottom left of room rectangle
+  private static final Point2D max = new Point2D(500.0, 500.0);     // Top right of the room rectangle
   private static final double maxMove = 0.1;    // Maximum distance an agent can move before needing to be updated
   private static final double frameRate = 0.5;  // Rate at which to save frames for plotting
-  private static final double fineness = 0.5;   // Resolution at which to model the room as a graph
-  private static final String outputPath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
+  private static final double fineness = 1;     // Resolution at which to model the room as a graph
+  // private static final String outputPath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
+  private static final String outputPath = "/home/painkiller/Desktop/out.mat";   // Output file from which to make MATLAB video
 
   // Simulation state variables
   private static Agent[] agents;
@@ -46,10 +50,13 @@ public class SwarmSim {
       orderedAgents.add(nextAgent);
 
       if (t > plotter.getNextFrameTime()) {
+        System.out.println("t: " + t);
         plotter.saveFrame(agents);
       }
 
     }
+
+    System.out.println("Final t: " + t);
 
     plotter.writeToMAT(outputPath);
 
@@ -64,7 +71,7 @@ public class SwarmSim {
 
     // Initialize the agents
     for (int i = 0; i < numAgents; i++) {
-      agents[i] = new Agent(i, min, max);
+      agents[i] = new Agent(i, agentMin, agentMax);
 
       agents[i].setNextUpdateTime(Math.min(maxMove / agents[i].getSpeed(), frameRate));
       orderedAgents.add(agents[i]);
@@ -75,9 +82,18 @@ public class SwarmSim {
 
   private static void initializeRoom() {
 
-    room = new Room(min, max, fineness);
-    room.addWall(new LineSegment2D(25.0, 10.0, 25.0, 40.0));
+    Vector2D rightShift = new Vector2D(500.0, 0.0);
+    room = new Room(min, max.plus(rightShift), fineness);
+    Point2D bottomRight = new Point2D(max.x(), min.y());
+    Point2D topLeft = new Point2D(min.x(), max.y());
+    Point2D doorUpper = new Point2D(max.x(), max.y()/2 + 10);
+    Point2D doorLower = new Point2D(max.x(), max.y()/2 - 10);
 
+    room.addWall(new LineSegment2D(topLeft, max)); // top wall
+    room.addWall(new LineSegment2D(min, topLeft)); // left wall
+    room.addWall(new LineSegment2D(bottomRight, min)); // bottom wall
+    room.addWall(new LineSegment2D(max, doorUpper)); // upper right wall
+    room.addWall(new LineSegment2D(bottomRight, doorLower)); // lower right wall
   }
 
   /**
