@@ -47,7 +47,7 @@ class Plotter {
       newPositions[i] = agents[i].getPos();
     }
     positions.add(newPositions);
-    System.out.println("Saved frame " + positions.size() + " at time " + nextFrameTime + ".");
+    // System.out.println("Saved frame " + positions.size() + " at time " + nextFrameTime + ".");
     nextFrameTime = nextFrameTime + frameRate;
   }
 

@@ -32,6 +32,8 @@ class Room {
 
   Room(Point2D min, Point2D max, double fineness) {
 
+    System.out.println("Constructing room...");
+
     this.min = min;
     this.fineness = fineness;
 
@@ -74,8 +76,12 @@ class Room {
     outside = new Cell(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
 
     exits = new ArrayList<>();
-    System.out.println(grid[nCellsX - 1][(nCellsY - 1)/2]);
+    System.out.println("Adding left exit at: " + grid[0][(nCellsY - 1)/2].getCoordinates());
+    exits.add(grid[0][(nCellsY - 1)/2]);
+    System.out.println("Adding right exit at: " + grid[nCellsX - 1][(nCellsY - 1)/2].getCoordinates());
     exits.add(grid[nCellsX - 1][(nCellsY - 1)/2]);
+    System.out.println("Constructed a room with " + roomGraph.vertexSet().size() + " vertices.");
+    System.out.println("Computing exit distances...");
     updateExitDistances();
 
     walls = new ArrayList<>();
@@ -88,6 +94,7 @@ class Room {
   void addWall(LineSegment2D wall) {
 
     walls.add(wall);
+    System.out.println("Added wall: " + wall);
 
     Set<CellEdge> toRemove = new HashSet<>();
 
@@ -124,15 +131,19 @@ class Room {
   Vector2D getGradient(Point2D position) {
     Cell currentCell = getCellFromPosition(position);
 
+    if (Double.isInfinite(currentCell.getCoordinates().x())) { // If agent is outside the graph
+      return new Vector2D(0.0, 0.0);
+    }
+
     Vector2D gradient = new Vector2D(0.0, 0.0);
+
     Collection<Cell> neighbors = Graphs.neighborListOf(roomGraph, currentCell);
     for (Cell neighbor : neighbors) {
       // diffDistance is positive if the neighbor is closer to the exit than the current cell, and negative otherwise
       double diffDistance = currentCell.getDistToExit() - neighbor.getDistToExit();
       gradient = gradient.plus((new Vector2D(currentCell.getCoordinates(), neighbor.getCoordinates())).times(diffDistance));
     }
-    // System.out.println("Detected gradient " + gradient + " at position " + position + " with " + neighbors.size() + " neighbors");
-    return gradient.times(1.0/neighbors.size());
+    return gradient.times(1.0/neighbors.size()); // Divide by number of neighbors, to average
   }
 
   /**

@@ -1,5 +1,6 @@
 package swarms;
 
+import com.sun.org.apache.bcel.internal.generic.FLOAD;
 import math.geom2d.Point2D;
 import math.geom2d.Vector2D;
 import math.geom2d.line.LineSegment2D;
@@ -20,6 +21,7 @@ public class SwarmSim {
   private static final double fineness = 1;     // Resolution at which to model the room as a graph
   // private static final String outputPath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
   private static final String outputPath = "/home/painkiller/Desktop/out.mat";   // Output file from which to make MATLAB video
+  private static final double exitBufferDist = 100.0; // Distance beyond the exits that the room graph should cover
 
   // Simulation state variables
   private static Agent[] agents;
@@ -31,9 +33,10 @@ public class SwarmSim {
     initializeAgents();
     initializeRoom();
 
-    // Start running the simulation
+    // Run the simulation
     double t = 0.0;
     Plotter plotter = new Plotter(frameRate, agents, room);
+    System.out.println("Starting simulation...");
     while (t < simDuration) {
 
       // Get next agent to update from PriorityQueue
@@ -50,7 +53,7 @@ public class SwarmSim {
       orderedAgents.add(nextAgent);
 
       if (t > plotter.getNextFrameTime()) {
-        System.out.println("t: " + t);
+        // System.out.println("t: " + t);
         plotter.saveFrame(agents);
       }
 
@@ -82,18 +85,27 @@ public class SwarmSim {
 
   private static void initializeRoom() {
 
-    Vector2D rightShift = new Vector2D(500.0, 0.0);
-    room = new Room(min, max.plus(rightShift), fineness);
-    Point2D bottomRight = new Point2D(max.x(), min.y());
-    Point2D topLeft = new Point2D(min.x(), max.y());
-    Point2D doorUpper = new Point2D(max.x(), max.y()/2 + 10);
-    Point2D doorLower = new Point2D(max.x(), max.y()/2 - 10);
+    double p = fineness/10; // small perturbation to prevent endpoint bugs
 
-    room.addWall(new LineSegment2D(topLeft, max)); // top wall
-    room.addWall(new LineSegment2D(min, topLeft)); // left wall
-    room.addWall(new LineSegment2D(bottomRight, min)); // bottom wall
-    room.addWall(new LineSegment2D(max, doorUpper)); // upper right wall
-    room.addWall(new LineSegment2D(bottomRight, doorLower)); // lower right wall
+    Vector2D rightShift = new Vector2D(exitBufferDist, 0.0);
+    room = new Room(min.minus(rightShift), max.plus(rightShift), fineness);
+    Point2D topLeft = new Point2D(min.x() - p, max.y() + p);
+    Point2D bottomLeft = new Point2D(min.x() - p, min.y() - p);
+    Point2D bottomRight = new Point2D(max.x() + p, min.y() - p);
+    Point2D topRight = new Point2D(max.x() + p, max.y() + p);
+
+    Point2D rightDoorUpper = new Point2D(topRight.x(), topRight.y()/2 + 10);
+    Point2D rightDoorLower = new Point2D(topRight.x(), topRight.y()/2 - 10);
+    Point2D leftDoorUpper = new Point2D(bottomLeft.x(), topRight.y()/2 + 10);
+    Point2D leftDoorLower = new Point2D(bottomLeft.x(), topRight.y()/2 - 10);
+
+    room.addWall(new LineSegment2D(topRight, topLeft)); // top wall
+    room.addWall(new LineSegment2D(topLeft, leftDoorUpper)); // upper left wall
+    room.addWall(new LineSegment2D(leftDoorLower, bottomLeft)); // lower left wall
+    room.addWall(new LineSegment2D(bottomLeft, bottomRight)); // bottom wall
+    room.addWall(new LineSegment2D(bottomRight, rightDoorLower)); // lower right wall
+    room.addWall(new LineSegment2D(rightDoorUpper, topRight)); // upper right wall
+
   }
 
   /**

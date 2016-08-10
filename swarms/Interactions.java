@@ -57,8 +57,6 @@ class Interactions {
     pushee.addForce(totalForce);
     pusher.addForce(totalForce.opposite());
 
-    System.out.println("Agent " + pusher.getID() + " pushed agent " + pushee.getID() + " with force " + totalForce + ".");
-
   }
 
 }
