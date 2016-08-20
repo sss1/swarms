@@ -75,13 +75,10 @@ class Room {
 
     outside = new Cell(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
 
+    // Added two exits, one on the left and one on the right
     exits = new ArrayList<>();
-    System.out.println("Adding left exit at: " + grid[0][(nCellsY - 1)/2].getCoordinates());
     exits.add(grid[0][(nCellsY - 1)/2]);
-    System.out.println("Adding right exit at: " + grid[nCellsX - 1][(nCellsY - 1)/2].getCoordinates());
     exits.add(grid[nCellsX - 1][(nCellsY - 1)/2]);
-    System.out.println("Constructed a room with " + roomGraph.vertexSet().size() + " vertices.");
-    System.out.println("Computing exit distances...");
     updateExitDistances();
 
     walls = new ArrayList<>();
@@ -94,7 +91,6 @@ class Room {
   void addWall(LineSegment2D wall) {
 
     walls.add(wall);
-    System.out.println("Added wall: " + wall);
 
     Set<CellEdge> toRemove = new HashSet<>();
 
@@ -169,12 +165,6 @@ class Room {
       return outside;
     }
     return grid[idxX][idxY];
-//    try {
-//      return grid[idxX][idxY];
-//    } catch (ArrayIndexOutOfBoundsException) {
-//      System.out.println("An agent left the room.");
-//      return outside;
-//    }
   }
 
   /**
