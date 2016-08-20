@@ -11,14 +11,14 @@ public class SwarmSim {
 
   // Simulation parameters
   private static final double simDuration = 500.0; // Time (in seconds) to simulate
-  private static final int numAgents = 500;
+  private static final int numAgents = 250;
   private static final Point2D min = new Point2D(0.0, 0.0);         // Bottom left of room rectangle
   private static final Point2D max = new Point2D(50.0, 50.0);     // Top right of the room rectangle
   private static final Point2D agentMin = max.scale(0.25);    // Bottom left of rectangle in which agents start
   private static final Point2D agentMax = max.scale(0.75); // Top right of rectangle in which agents start
-  private static final double maxMove = 0.3;    // Maximum distance an agent can move before needing to be updated
+  private static final double maxMove = 0.2;    // Maximum distance an agent can move before needing to be updated
   private static final double frameRate = 0.5;  // Rate at which to save frames for plotting
-  private static final double spatialResolution = 1;     // Resolution at which to model the room as a graph
+  private static final double spatialResolution = 0.2;     // Resolution at which to model the room as a graph
   // private static final String outputPath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
   private static final String outputPath = "/home/painkiller/Desktop/out.mat";   // Output file from which to make MATLAB video
   private static final double exitBufferDist = 100.0; // Distance beyond the exits that the room graph should cover
@@ -117,10 +117,13 @@ public class SwarmSim {
     roomBottomLeft = bottomLeft;
     roomTopRight = topRight;
 
-    Point2D rightDoorUpper = new Point2D(topRight.x(), topRight.y()/2 + 10);
-    Point2D rightDoorLower = new Point2D(topRight.x(), topRight.y()/2 - 10);
-    Point2D leftDoorUpper = new Point2D(bottomLeft.x(), topRight.y()/2 + 0.5);
-    Point2D leftDoorLower = new Point2D(bottomLeft.x(), topRight.y()/2 - 0.5);
+    double rightDoorWidth = 4.0;
+    double leftDoorWidth = 1.0;
+
+    Point2D rightDoorUpper = new Point2D(topRight.x(), topRight.y()/2 + rightDoorWidth/2.0);
+    Point2D rightDoorLower = new Point2D(topRight.x(), topRight.y()/2 - rightDoorWidth/2.0);
+    Point2D leftDoorUpper = new Point2D(bottomLeft.x(), topRight.y()/2 + leftDoorWidth/2.0);
+    Point2D leftDoorLower = new Point2D(bottomLeft.x(), topRight.y()/2 - leftDoorWidth/2.0);
 
     room.addWall(new LineSegment2D(topRight, topLeft)); // top wall
     room.addWall(new LineSegment2D(topLeft, leftDoorUpper)); // upper left wall
@@ -154,14 +157,17 @@ public class SwarmSim {
 
     for (Agent agent : agents) {
 
-      // no self-interactions or interactions with agents outside the room
-      if (agent.getID() == updatedAgent.getID() || !agentIsInRoom(agent)) { continue; }
+      // no self-interactions
+      if (agent.getID() == updatedAgent.getID()) { continue; }
+
+//      // no self-interactions or interactions with agents outside the room
+//      if (agent.getID() == updatedAgent.getID() || !agentIsInRoom(agent)) { continue; }
 
       if (Interactions.collision(agent, updatedAgent)) {
         Interactions.push(updatedAgent, agent);
       }
       // Updated agent is attracted to more quickly moving agents
-      // Interactions.speedAttract(agent, updatedAgent);
+      Interactions.speedAttract(agent, updatedAgent);
     }
 
   }
