@@ -35,7 +35,7 @@ public class SwarmSim {
 
     // Run the simulation
     double t = 0.0;
-    Plotter plotter = new Plotter(frameRate, agents, room);
+    MatPlotter matPlotter = new MatPlotter(frameRate, agents, room);
     System.out.println("Starting simulation...");
     while (t < simDuration) {
 
@@ -60,8 +60,8 @@ public class SwarmSim {
             nextAgent.getPos() + ".");
       }
 
-      if (t > plotter.getNextFrameTime()) {
-        plotter.saveFrame(agents);
+      if (t > matPlotter.getNextFrameTime()) {
+        matPlotter.saveFrame(agents);
       }
 
     }
@@ -73,7 +73,7 @@ public class SwarmSim {
     fracInRoom /= numAgents;
     System.out.println("In the end, " + fracInRoom + " fraction of agents remained in the room.");
 
-    plotter.writeToMAT(outputPath);
+    matPlotter.writeToMAT(outputPath);
 
   }
 

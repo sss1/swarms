@@ -14,7 +14,7 @@ import java.util.ArrayList;
  *
  * Created by sss1 on 7/27/16.
  */
-class Plotter {
+class MatPlotter {
 
   private ArrayList<Point2D[]> positions;
   private double[][] room;
@@ -23,7 +23,7 @@ class Plotter {
   private final double frameRate;
   private double nextFrameTime;
 
-  Plotter(double frameRate, Agent[] agents, Room room) {
+  MatPlotter(double frameRate, Agent[] agents, Room room) {
     this.frameRate = frameRate;
     radii = new double[agents.length];
     for (int i = 0; i < agents.length; i++) {
