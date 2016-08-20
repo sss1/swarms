@@ -2,11 +2,15 @@ package swarms;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
+import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.ui.ApplicationFrame;
+
+import java.io.File;
+import java.io.IOException;
 
 /**
  * Stores necessary information over time and produces plots.
@@ -20,6 +24,7 @@ class Plotter extends ApplicationFrame {
   Plotter(final String title) {
     super(title);
     fractionInRoomOverTime = new XYSeries("Fraction of agents in the room."); // legend label of item to plot
+    fractionInRoomOverTime.add(0.0, 1.0);
   }
 
   void addFractionInRoom(double t, double fractionInRoom) {
@@ -40,6 +45,13 @@ class Plotter extends ApplicationFrame {
     );
     final ChartPanel chartPanel = new ChartPanel(chart);
     chartPanel.setPreferredSize(new java.awt.Dimension(500, 250));
+    setContentPane(chartPanel);
+
+    try { // Try to save chart
+      ChartUtilities.saveChartAsPNG(new File("/home/painkiller/Desktop/withoutSpeedAttract.png"), chart, 500, 250);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 
 }
