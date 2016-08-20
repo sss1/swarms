@@ -10,6 +10,8 @@ class Interactions {
   private static final double compressiveTolerance = 1.0; // Increase this to reduce how much repulsion increases with proximity
   private static final double repulsionStrength = 10.0; // Scalar weight of interpersonal repulsion term
   private static final double frictionStrength = 1.0; // Scalar weight of interpersonal friction term
+  //    Speed attraction parameters:
+  private static final double speedPenalty = 0.2; // Minimum difference in speeds for speed attraction to apply
   //    Attraction parameters: TODO
   //    Orientation parameters: TODO
 
@@ -20,7 +22,7 @@ class Interactions {
   static boolean collision(Agent a1, Agent a2) {
     double dist = Point2D.distance(a1.getPos(), a2.getPos());
     double totRadius = a1.getRadius() + a2.getRadius();
-    return  dist < totRadius;
+    return dist < totRadius;
   }
 
   /**
@@ -57,6 +59,12 @@ class Interactions {
     pushee.addForce(totalForce);
     pusher.addForce(totalForce.opposite());
 
+  }
+
+  static void speedAttract(Agent attractor, Agent attractee) {
+    Vector2D direction = (new Vector2D(attractee.getPos(), attractor.getPos())).normalize();
+    double magnitude = Math.min(Math.max(attractor.getSpeed() - attractee.getSpeed() - speedPenalty, 0), 0.1);
+    attractee.addForce(direction.times(magnitude));
   }
 
 }
