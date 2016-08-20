@@ -25,10 +25,15 @@ class Agent {
   // Constant agent-specific parameters
   private final double mass, radius, maxSpeed;
 
+  // Simulation settings
+  private double frameRate, maxMove;
+
   private final int ID; // Index ID of this agent (0 <= ID < numAgents)
 
-  Agent(int ID, Point2D min, Point2D max) {
+  Agent(int ID, Point2D min, Point2D max, double frameRate, double maxMove) {
 
+    this.frameRate = frameRate;
+    this.maxMove = maxMove;
     this.ID = ID;
 
     Random rand = new Random();
@@ -58,12 +63,12 @@ class Agent {
   // Moves and accelerates the agent, updating its priority
   // It is crucial for synchrony that the Agent is removed and re-inserted
   // into the PriorityQueue whenever update() is called!
-  void update(double t, double maxMove, Room room) {
+  void update(double t, Room room) {
     updateIndividualForce(room);
     accelerate(t);
     move(t, room.getWalls());
     tLastUpdate = t;
-    setNextUpdateTime(t + (maxMove / getSpeed()));
+    setNextUpdateTime(t + Math.min(maxMove / getSpeed(), frameRate));
   }
 
   // Agent position is needed to compute social forces and for plotting
