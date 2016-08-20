@@ -20,6 +20,7 @@ class Agent {
 
   // Constant parameters
   private final double forceDecayConstant = 10.0; // Rate at which earlier social forces decay
+  private final double myForceWeight = 10.0;
 
   // Constant agent-specific parameters
   private final double mass, radius, maxSpeed;
@@ -33,7 +34,7 @@ class Agent {
     Random rand = new Random();
 
     // These are somewhat arbitrary ranges, for now
-    mass = 65.0 + 10.0 * rand.nextDouble(); // 65-75
+    mass = 65.0 + 10.0 * rand.nextDouble()/5; // 65-75
     radius = 0.25 + (0.1 * rand.nextDouble()); // 0.25-0.35
     maxSpeed = 1.0 + 3.0 * rand.nextDouble(); // 1-4
 
@@ -130,23 +131,20 @@ class Agent {
   // change nextUpdateTime!
   private void accelerate(double time) {
     double timeSinceUpdate = time - tLastUpdate;
-    Vector2D acc = myForce.plus(socialForce).times(1/mass);
+    Vector2D acc = myForce.times(myForceWeight).plus(socialForce).times(1/mass);
     vel = vel.plus(acc.times(timeSinceUpdate));
 
     // Make sure speed is at most maxSpeed
     if (getSpeed() > maxSpeed) vel = vel.normalize().times(maxSpeed);
 
     // Let earlier social forces decay over time, once they have been incorporated into the velocity
-    socialForce = socialForce.times(Math.exp(-forceDecayConstant*timeSinceUpdate));
+    socialForce = new Vector2D(0.0, 0.0); // socialForce.times(Math.exp(-forceDecayConstant*timeSinceUpdate));
 
   }
 
-  // TODO: Design mechanics for individuals to choose their desired paths
   // For now, we should label certain cells as exits, and have agents push towards those
   private void updateIndividualForce(Room room) {
     myForce = room.getGradient(pos);
-//    // For now, always move to the origin
-//    myForce = new Vector2D(-7*pos.x()/Math.abs(pos.x()), -7*pos.y()/Math.abs(pos.y()));
   }
 
   void setNextUpdateTime(double nextUpdateTime) {
