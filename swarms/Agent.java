@@ -26,21 +26,22 @@ class Agent {
   private final double mass, radius, maxSpeed;
 
   // Simulation settings
-  private double frameRate, maxMove;
+  private double frameRate, maxMove, numAgents;
 
   private final int ID; // Index ID of this agent (0 <= ID < numAgents)
 
-  Agent(int ID, Point2D min, Point2D max, double frameRate, double maxMove) {
+  Agent(int ID, Point2D min, Point2D max, double frameRate, double maxMove, int numAgents) {
 
     this.frameRate = frameRate;
     this.maxMove = maxMove;
+    this.numAgents = numAgents;
     this.ID = ID;
 
     Random rand = new Random();
 
     // These are somewhat arbitrary ranges, for now
-    mass = 65.0 + 10.0 * rand.nextDouble()/5; // 65-75
-    radius = 0.25 + (0.1 * rand.nextDouble()); // 0.25-0.35
+    mass = (65.0 + 10.0 * rand.nextDouble()/5)/10.0; // 65-75
+    radius = 0.4 + (0.1 * rand.nextDouble()); // 0.4-0.5
     maxSpeed = 1.0 + 3.0 * rand.nextDouble(); // 1-4
 
     // Uniformly random valid initial position within rectangle determined by
@@ -48,12 +49,11 @@ class Agent {
     pos = new Point2D(min.x() + (max.x() - min.x()) * rand.nextDouble(), min.y() + (max.y() - min.y()) * rand.nextDouble());
 
     // Uniformly random valid initial velocity within circle of radius maxSpeed
-    vel = Vector2D.createPolar((maxSpeed / 5.0) * rand.nextDouble(), 2.0 * Math.PI * rand.nextDouble());
+    vel = Vector2D.createPolar(maxSpeed * rand.nextDouble() / 10.0, 2.0 * Math.PI * rand.nextDouble());
 
     socialForce = new Vector2D(0.0, 0.0);
     myForce = new Vector2D(0.0, 0.0);
     tLastUpdate = 0.0;
-
   }
 
   int getID() {
@@ -87,6 +87,24 @@ class Agent {
   }
 
   /**
+   * @param path line segment from current position to hypothetical next position
+   * @param walls a collection of all walls in the room
+   * @return first wall with which the agent's current movement would collide, or null if there is no such wall
+   */
+  private LineSegment2D getCollidingWall(LineSegment2D path, Collection<LineSegment2D> walls) {
+    LineSegment2D collidingWall = null;
+    double distanceToCollidingWall = Double.POSITIVE_INFINITY;
+    for (LineSegment2D wall : walls) {
+      if (LineSegment2D.intersects(wall, path) &&
+          Point2D.distance(pos, LineSegment2D.getIntersection(wall, path)) < distanceToCollidingWall) {
+        distanceToCollidingWall = Point2D.distance(pos, LineSegment2D.getIntersection(wall, path));
+        collidingWall = wall;
+      }
+    }
+    return collidingWall;
+  }
+
+  /**
    * Update the position of the agent, based on their velocity and the time since their last update,
    * truncating their movement and velocity based on any walls in the way
    * @param time the time at which the move occurs
@@ -114,30 +132,12 @@ class Agent {
     pos = pos.plus(move);
   }
 
-  /**
-   * @param path line segment from current position to hypothetical next position
-   * @param walls a collection of all walls in the room
-   * @return first wall with which the agent's current movement would collide, or null if there is no such wall
-   */
-  private LineSegment2D getCollidingWall(LineSegment2D path, Collection<LineSegment2D> walls) {
-    LineSegment2D collidingWall = null;
-    double distanceToCollidingWall = Double.POSITIVE_INFINITY;
-    for (LineSegment2D wall : walls) {
-      if (LineSegment2D.intersects(wall, path) &&
-          Point2D.distance(pos, LineSegment2D.getIntersection(wall, path)) < distanceToCollidingWall) {
-        distanceToCollidingWall = Point2D.distance(pos, LineSegment2D.getIntersection(wall, path));
-        collidingWall = wall;
-      }
-    }
-    return collidingWall;
-  }
-
   // It is crucial for synchrony that this is the only function allowed to
   // change nextUpdateTime!
   private void accelerate(double time) {
     double timeSinceUpdate = time - tLastUpdate;
-    Vector2D acc = myForce.times(myForceWeight).plus(socialForce).times(1/mass);
-    vel = vel.plus(acc.times(timeSinceUpdate));
+    Vector2D acc = myForce.times(myForceWeight).plus(socialForce.times(1/numAgents)).times(1/mass); // a = F/m
+    vel = vel.plus(acc.times(timeSinceUpdate)); // dv = a*dt
 
     // Make sure speed is at most maxSpeed
     if (getSpeed() > maxSpeed) vel = vel.normalize().times(maxSpeed);
