@@ -32,8 +32,6 @@ class Room {
 
   Room(Point2D min, Point2D max, double fineness) {
 
-    System.out.println("Constructing room...");
-
     this.min = min;
     this.fineness = fineness;
 

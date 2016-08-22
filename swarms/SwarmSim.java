@@ -11,7 +11,7 @@ public class SwarmSim {
 
   // Simulation parameters
   private static final double simDuration = 500.0; // Time (in seconds) to simulate
-  private static final int numAgents = 250;
+  private static final int numAgents = 300;
   private static final Point2D min = new Point2D(0.0, 0.0);         // Bottom left of room rectangle
   private static final Point2D max = new Point2D(50.0, 50.0);     // Top right of the room rectangle
   private static final Point2D agentMin = max.scale(0.25);    // Bottom left of rectangle in which agents start
@@ -22,6 +22,7 @@ public class SwarmSim {
   // private static final String outputPath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
   private static final String outputPath = "/home/painkiller/Desktop/out.mat";   // Output file from which to make MATLAB video
   private static final double exitBufferDist = 100.0; // Distance beyond the exits that the room graph should cover
+  private static final boolean asymmetricInitialAgentDistribution = true; // Whether the initial distribution of agents is highly asymmetric
 
   // Simulation state variables
   private static Agent[] agents;
@@ -31,7 +32,9 @@ public class SwarmSim {
 
   public static void main(String[] args) {
 
+    System.out.println("Constructing agents...");
     initializeAgents();
+    System.out.println("Constructing room...");
     initializeRoom();
 
     // Run the simulation
@@ -45,7 +48,7 @@ public class SwarmSim {
       Agent nextAgent = orderedAgents.poll();
       boolean wasInRoom = agentIsInRoom(nextAgent);
       t = nextAgent.getNextUpdateTime();
-      if (t % 10.0 < 0.001) { System.out.println("The time is " + t); } // Print a bit every 50 timesteps
+      if (t % 10.0 < 0.002) { System.out.println("The time is " + t); } // Print a bit every 10 timesteps
 
       // Calculate forces, accelerate, move the agent, and update its priority
       nextAgent.update(t, room);
@@ -56,11 +59,9 @@ public class SwarmSim {
       // Reinsert the agent back into the priority queue
       orderedAgents.add(nextAgent);
 
-      // Report whether the agent left the room
+      // Track whether the agent left the room
       boolean isInRoom = agentIsInRoom(nextAgent);
       if (wasInRoom && !isInRoom) {
-//        System.out.println("Agent " + nextAgent.getID() + " left the room at time " + t + ", at position " +
-//            nextAgent.getPos() + ".");
         double fracInRoom = 0.0;
         for (Agent agent : agents) {
           fracInRoom += agentIsInRoom(agent) ? 1.0 : 0.0;
@@ -76,12 +77,14 @@ public class SwarmSim {
 
     }
 
+    // Export data necessary for movies as .mat file
+    matPlotter.writeToMAT(outputPath);
+
     // Plot the fraction of agents in the room over time
     plotter.plotFractionInRoomOverTime();
     plotter.pack();
     RefineryUtilities.centerFrameOnScreen(plotter);
     plotter.setVisible(true);
-    matPlotter.writeToMAT(outputPath);
 
   }
 
@@ -94,7 +97,12 @@ public class SwarmSim {
 
     // Initialize the agents
     for (int i = 0; i < numAgents; i++) {
-      agents[i] = new Agent(i, agentMin, agentMax, frameRate, maxMove);
+      if (asymmetricInitialAgentDistribution && i > numAgents/10) {
+        Point2D shiftedAgentMax = new Point2D(agentMax.x()/4, agentMax.y());
+        agents[i] = new Agent(i, agentMin, shiftedAgentMax, frameRate, maxMove, numAgents);
+      } else {
+        agents[i] = new Agent(i, agentMin, agentMax, frameRate, maxMove, numAgents);
+      }
 
       agents[i].setNextUpdateTime(Math.min(maxMove / agents[i].getSpeed(), frameRate));
       orderedAgents.add(agents[i]);
@@ -118,7 +126,7 @@ public class SwarmSim {
     roomTopRight = topRight;
 
     double rightDoorWidth = 4.0;
-    double leftDoorWidth = 1.0;
+    double leftDoorWidth = 0.5;
 
     Point2D rightDoorUpper = new Point2D(topRight.x(), topRight.y()/2 + rightDoorWidth/2.0);
     Point2D rightDoorLower = new Point2D(topRight.x(), topRight.y()/2 - rightDoorWidth/2.0);
