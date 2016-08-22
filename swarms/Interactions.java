@@ -11,7 +11,8 @@ class Interactions {
   private static final double repulsionStrength = 10.0; // Scalar weight of interpersonal repulsion term
   private static final double frictionStrength = 1.0; // Scalar weight of interpersonal friction term
   //    Speed attraction parameters:
-  private static final double speedPenalty = 0.2; // Minimum difference in speeds for speed attraction to apply
+  private static final double speedPenalty = 0.8; // Minimum difference in speeds for speed attraction to apply
+  private static final double speedAttractWeight = 2.0; // Multiplicative weight for the speedAttraction term
   //    Attraction parameters: TODO
   //    Orientation parameters: TODO
 
@@ -62,9 +63,11 @@ class Interactions {
   }
 
   static void speedAttract(Agent attractor, Agent attractee) {
-    Vector2D direction = (new Vector2D(attractee.getPos(), attractor.getPos())).normalize();
-    double magnitude = Math.min(Math.max(attractor.getSpeed() - attractee.getSpeed() - speedPenalty, 0), 0.1);
-    attractee.addForce(direction.times(magnitude));
+    double magnitude = attractor.getSpeed() - attractee.getSpeed() - speedPenalty;
+    if (magnitude > Double.MIN_VALUE) {
+      Vector2D direction = (new Vector2D(attractee.getPos(), attractor.getPos())).normalize();
+      attractee.addForce(direction.times(speedAttractWeight * Math.max(magnitude, 0.0)));
+    }
   }
 
 }
