@@ -1,2 +1,7 @@
 *.class
 *.mat
+
+# IntelliJ IDEA files
+swarms.iml
+out/
+.idea/
