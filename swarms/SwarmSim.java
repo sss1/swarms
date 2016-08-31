@@ -3,26 +3,30 @@ package swarms;
 import math.geom2d.Point2D;
 import math.geom2d.Vector2D;
 import math.geom2d.line.LineSegment2D;
-import org.jfree.ui.RefineryUtilities;
+import org.jfree.data.xy.XYSeries;
 
+import java.util.ArrayList;
 import java.util.PriorityQueue;
 
 public class SwarmSim {
 
   // Simulation parameters
-  private static final double simDuration = 500.0; // Time (in seconds) to simulate
+  private static final double simDuration = 100.0; // Time (in seconds) to simulate
   private static final int numAgents = 300;
   private static final Point2D min = new Point2D(0.0, 0.0);         // Bottom left of room rectangle
   private static final Point2D max = new Point2D(50.0, 50.0);     // Top right of the room rectangle
-  private static final Point2D agentMin = max.scale(0.25);    // Bottom left of rectangle in which agents start
-  private static final Point2D agentMax = max.scale(0.75); // Top right of rectangle in which agents start
-  private static final double maxMove = 0.2;    // Maximum distance an agent can move before needing to be updated
-  private static final double frameRate = 0.5;  // Rate at which to save frames for plotting
+  private static final Point2D agentMin = max.scale(0.01);    // Bottom left of rectangle in which agents start
+  private static final Point2D agentMax = max.scale(0.99); // Top right of rectangle in which agents start
+  private static final double maxMove = 0.1;    // Maximum distance an agent can move before needing to be updated
+  private static final double frameRate = 1.0;  // Rate at which to save frames for plotting
   private static final double spatialResolution = 0.2;     // Resolution at which to model the room as a graph
-  // private static final String outputPath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
-  private static final String outputPath = "/home/painkiller/Desktop/out.mat";   // Output file from which to make MATLAB video
+  private static final String movieFilePath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
+  private static final String plotFilePath = "/home/sss1/Desktop/withoutSpeedAttract.png";
+//  private static final String movieFilePath = "/home/painkiller/Desktop/out.mat";   // Output file from which to make MATLAB video
+//  private static final String plotFilePath = "/home/painkiller/Desktop/withoutSpeedAttract.png";
   private static final double exitBufferDist = 100.0; // Distance beyond the exits that the room graph should cover
-  private static final boolean asymmetricInitialAgentDistribution = true; // Whether the initial distribution of agents is highly asymmetric
+  private static final boolean asymmetricInitialAgentDistribution = false; // Whether the initial distribution of agents is highly asymmetric
+  private static final boolean makeMovie = true;
 
   // Simulation state variables
   private static Agent[] agents;
@@ -31,17 +35,31 @@ public class SwarmSim {
   private static Point2D roomBottomLeft, roomTopRight;
 
   public static void main(String[] args) {
+    double leftDoorWidth = 10.0;
+    double rightDoorWidth = 10.0;
+    // boolean hasObstacle; // = false;
 
+    ArrayList<XYSeries> allPlots = new ArrayList<>();
+    // allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle));
+    // hasObstacle = true;
+    allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, true, "With Obstacle"));
+  }
+
+  private static XYSeries runTrial(double leftDoorWidth, double rightDoorWidth, boolean hasObstacle, String label) {
     System.out.println("Constructing agents...");
     initializeAgents();
     System.out.println("Constructing room...");
-    initializeRoom();
+    initializeRoom(leftDoorWidth, rightDoorWidth, hasObstacle);
 
     // Run the simulation
     double t = 0.0;
     Plotter plotter = new Plotter("Fraction of agents in room over time");
-    MatPlotter matPlotter = new MatPlotter(frameRate, agents, room);
+    MatPlotter matPlotter;
+    if (makeMovie) {
+      matPlotter = new MatPlotter(frameRate, agents, room);
+    }
     System.out.println("Starting simulation...");
+    XYSeries fractionInRoomOverTime = new XYSeries(label); // legend label of item to plot
     while (t < simDuration) {
 
       // Get next agent to update from PriorityQueue
@@ -67,24 +85,29 @@ public class SwarmSim {
           fracInRoom += agentIsInRoom(agent) ? 1.0 : 0.0;
         }
         fracInRoom /= numAgents;
-        plotter.addFractionInRoom(t, fracInRoom);
+        fractionInRoomOverTime.add(t, fracInRoom);
         if (fracInRoom < 1.0/numAgents) { break; } // no agents left in room; terminate simulation
       }
 
-      if (t > matPlotter.getNextFrameTime()) {
+      if (makeMovie && t > matPlotter.getNextFrameTime()) {
         matPlotter.saveFrame(agents);
       }
 
     }
 
     // Export data necessary for movies as .mat file
-    matPlotter.writeToMAT(outputPath);
+    if (makeMovie) {
+      matPlotter.writeToMAT(movieFilePath);
+    }
 
-    // Plot the fraction of agents in the room over time
-    plotter.plotFractionInRoomOverTime();
-    plotter.pack();
-    RefineryUtilities.centerFrameOnScreen(plotter);
-    plotter.setVisible(true);
+//    // Old code for running just a single experiment
+//    // Plot the fraction of agents in the room over time
+//    plotter.plotFractionInRoomOverTime(plotFilePath);
+//    plotter.pack();
+//    RefineryUtilities.centerFrameOnScreen(plotter);
+//    plotter.setVisible(true);
+
+    return plotter.getFractionInRoomOverTime();
 
   }
 
@@ -111,7 +134,7 @@ public class SwarmSim {
 
   }
 
-  private static void initializeRoom() {
+  private static void initializeRoom(double leftDoorWidth, double rightDoorWidth, boolean hasObstacle) {
 
     double p = spatialResolution /10; // small perturbation to prevent endpoint bugs
 
@@ -125,9 +148,6 @@ public class SwarmSim {
     roomBottomLeft = bottomLeft;
     roomTopRight = topRight;
 
-    double rightDoorWidth = 4.0;
-    double leftDoorWidth = 0.5;
-
     Point2D rightDoorUpper = new Point2D(topRight.x(), topRight.y()/2 + rightDoorWidth/2.0);
     Point2D rightDoorLower = new Point2D(topRight.x(), topRight.y()/2 - rightDoorWidth/2.0);
     Point2D leftDoorUpper = new Point2D(bottomLeft.x(), topRight.y()/2 + leftDoorWidth/2.0);
@@ -139,6 +159,15 @@ public class SwarmSim {
     room.addWall(new LineSegment2D(bottomLeft, bottomRight)); // bottom wall
     room.addWall(new LineSegment2D(bottomRight, rightDoorLower)); // lower right wall
     room.addWall(new LineSegment2D(rightDoorUpper, topRight)); // upper right wall
+    room.updateExitDistances();
+    if (hasObstacle) {
+      double horizontalObstacleOffset = 1.000001;
+      Point2D obstacleUpper = new Point2D(bottomLeft.x() + horizontalObstacleOffset, topLeft.y() * 0.6);
+      Point2D obstacleLower = new Point2D(bottomLeft.x() + horizontalObstacleOffset, topLeft.y() * 0.4);
+      room.addWall(new LineSegment2D(obstacleUpper, obstacleLower));
+    }
+
+//    room.updateExitDistances();
 
   }
 
@@ -175,7 +204,9 @@ public class SwarmSim {
         Interactions.push(updatedAgent, agent);
       }
       // Updated agent is attracted to more quickly moving agents
-      Interactions.speedAttract(agent, updatedAgent);
+      if (agentIsInRoom(updatedAgent)) {
+        Interactions.speedAttract(agent, updatedAgent);
+      }
     }
 
   }
