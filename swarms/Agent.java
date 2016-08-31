@@ -1,12 +1,12 @@
 package swarms;
 
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Random;
-
 import math.geom2d.Point2D;
 import math.geom2d.Vector2D;
 import math.geom2d.line.LineSegment2D;
+
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Random;
 
 class Agent {
 
@@ -21,6 +21,7 @@ class Agent {
   // Constant parameters
   private final double forceDecayConstant = 10.0; // Rate at which earlier social forces decay
   private final double myForceWeight = 10.0;
+  private final double noiseFactor = 2;
 
   // Constant agent-specific parameters
   private final double mass, radius, maxSpeed;
@@ -149,7 +150,11 @@ class Agent {
 
   // For now, we should label certain cells as exits, and have agents push towards those
   private void updateIndividualForce(Room room) {
-    myForce = room.getGradient(pos);
+    Random rand = new Random();
+    double xNoise = rand.nextGaussian();
+    double yNoise = rand.nextGaussian();
+    Vector2D gradient = room.getGradient(pos);
+    myForce = gradient.plus((new Vector2D(xNoise, yNoise)).times(noiseFactor * gradient.norm()));
   }
 
   void setNextUpdateTime(double nextUpdateTime) {
