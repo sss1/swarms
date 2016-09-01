@@ -11,7 +11,7 @@ import java.util.PriorityQueue;
 public class SwarmSim {
 
   // Simulation parameters
-  private static final double simDuration = 100.0; // Time (in seconds) to simulate
+  private static final double simDuration = 200.0; // Time (in seconds) to simulate
   private static final int numAgents = 300;
   private static final Point2D min = new Point2D(0.0, 0.0);         // Bottom left of room rectangle
   private static final Point2D max = new Point2D(50.0, 50.0);     // Top right of the room rectangle
@@ -21,12 +21,14 @@ public class SwarmSim {
   private static final double frameRate = 1.0;  // Rate at which to save frames for plotting
   private static final double spatialResolution = 0.2;     // Resolution at which to model the room as a graph
   private static final String movieFilePath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
-  private static final String plotFilePath = "/home/sss1/Desktop/withoutSpeedAttract.png";
+  private static final String plotFilePath = "/home/sss1/Desktop/obstacle_" + numAgents + "agents_" + simDuration + "seconds.png";
 //  private static final String movieFilePath = "/home/painkiller/Desktop/out.mat";   // Output file from which to make MATLAB video
 //  private static final String plotFilePath = "/home/painkiller/Desktop/withoutSpeedAttract.png";
   private static final double exitBufferDist = 100.0; // Distance beyond the exits that the room graph should cover
   private static final boolean asymmetricInitialAgentDistribution = false; // Whether the initial distribution of agents is highly asymmetric
-  private static final boolean makeMovie = true;
+  private static final boolean makeMovie = false;
+
+  // TODO: Make plotter X-axis go all the way to simDuration
 
   // Simulation state variables
   private static Agent[] agents;
@@ -35,17 +37,19 @@ public class SwarmSim {
   private static Point2D roomBottomLeft, roomTopRight;
 
   public static void main(String[] args) {
-    double leftDoorWidth = 10.0;
-    double rightDoorWidth = 10.0;
-    // boolean hasObstacle; // = false;
+    final double leftDoorWidth = 10.0;
+    final double rightDoorWidth = 10.0;
+    final boolean hasObstacle = true;
+//    boolean hasCommunication = false;
 
     ArrayList<XYSeries> allPlots = new ArrayList<>();
-    // allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle));
-    // hasObstacle = true;
-    allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, true, "With Obstacle"));
+    allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, "Without communication", false));
+//    hasCommunication = true;
+    allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, "With communication", true));
+    (new Plotter("Test")).plotMultiple(allPlots, plotFilePath);
   }
 
-  private static XYSeries runTrial(double leftDoorWidth, double rightDoorWidth, boolean hasObstacle, String label) {
+  private static XYSeries runTrial(double leftDoorWidth, double rightDoorWidth, boolean hasObstacle, String label, boolean hasCommunication) {
     System.out.println("Constructing agents...");
     initializeAgents();
     System.out.println("Constructing room...");
@@ -53,14 +57,15 @@ public class SwarmSim {
 
     // Run the simulation
     double t = 0.0;
-    Plotter plotter = new Plotter("Fraction of agents in room over time");
     MatPlotter matPlotter;
     if (makeMovie) {
       matPlotter = new MatPlotter(frameRate, agents, room);
     }
     System.out.println("Starting simulation...");
     XYSeries fractionInRoomOverTime = new XYSeries(label); // legend label of item to plot
-    while (t < simDuration) {
+    // Terminate the simulation when there are no agents left in the room or when the simulation duration has ended;
+    // whichever comes first
+    while (t < simDuration && getFracInRoom(agents) >= 1.0/numAgents) {
 
       // Get next agent to update from PriorityQueue
       Agent nextAgent = orderedAgents.poll();
@@ -72,7 +77,7 @@ public class SwarmSim {
       nextAgent.update(t, room);
 
       // Add new social forces to appropriate agents
-      updateSocialForces(agents, nextAgent);
+      updateSocialForces(agents, nextAgent, hasCommunication);
 
       // Reinsert the agent back into the priority queue
       orderedAgents.add(nextAgent);
@@ -80,13 +85,8 @@ public class SwarmSim {
       // Track whether the agent left the room
       boolean isInRoom = agentIsInRoom(nextAgent);
       if (wasInRoom && !isInRoom) {
-        double fracInRoom = 0.0;
-        for (Agent agent : agents) {
-          fracInRoom += agentIsInRoom(agent) ? 1.0 : 0.0;
-        }
-        fracInRoom /= numAgents;
+        double fracInRoom = getFracInRoom(agents);
         fractionInRoomOverTime.add(t, fracInRoom);
-        if (fracInRoom < 1.0/numAgents) { break; } // no agents left in room; terminate simulation
       }
 
       if (makeMovie && t > matPlotter.getNextFrameTime()) {
@@ -95,20 +95,24 @@ public class SwarmSim {
 
     }
 
+    // Add a final point to the plot at the last frame
+    fractionInRoomOverTime.add(t, getFracInRoom(agents));
+
     // Export data necessary for movies as .mat file
     if (makeMovie) {
       matPlotter.writeToMAT(movieFilePath);
     }
 
-//    // Old code for running just a single experiment
-//    // Plot the fraction of agents in the room over time
-//    plotter.plotFractionInRoomOverTime(plotFilePath);
-//    plotter.pack();
-//    RefineryUtilities.centerFrameOnScreen(plotter);
-//    plotter.setVisible(true);
+    return fractionInRoomOverTime;
 
-    return plotter.getFractionInRoomOverTime();
+  }
 
+  private static double getFracInRoom(Agent[] agents) {
+    double fracInRoom = 0.0;
+    for (Agent agent : agents) {
+      fracInRoom += agentIsInRoom(agent) ? 1.0 : 0.0;
+    }
+    return fracInRoom / numAgents;
   }
 
   private static void initializeAgents() {
@@ -190,7 +194,7 @@ public class SwarmSim {
    * @param agents array of all agents, sorted by ID
    * @param updatedAgent ID of the agent that was just updated
    */
-  private static void updateSocialForces(Agent[] agents, Agent updatedAgent) {
+  private static void updateSocialForces(Agent[] agents, Agent updatedAgent, boolean hasCommunication) {
 
     for (Agent agent : agents) {
 
@@ -203,9 +207,11 @@ public class SwarmSim {
       if (Interactions.collision(agent, updatedAgent)) {
         Interactions.push(updatedAgent, agent);
       }
-      // Updated agent is attracted to more quickly moving agents
-      if (agentIsInRoom(updatedAgent)) {
-        Interactions.speedAttract(agent, updatedAgent);
+      if (hasCommunication) {
+        // Updated agent is attracted to more quickly moving agents
+        if (agentIsInRoom(updatedAgent)) {
+          Interactions.speedAttract(agent, updatedAgent);
+        }
       }
     }
 

@@ -1,12 +1,12 @@
 package swarms;
 
-import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.axis.NumberTickUnit;
 import org.jfree.chart.axis.ValueAxis;
-import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
@@ -25,46 +25,13 @@ import java.util.ArrayList;
  */
 class Plotter extends ApplicationFrame {
 
-  private final XYSeries fractionInRoomOverTime;
+//  private final XYSeries fractionInRoomOverTime;
 
   Plotter(final String title) {
     super(title);
-    fractionInRoomOverTime = new XYSeries("Fraction of agents in the room."); // legend label of item to plot
-    fractionInRoomOverTime.add(0.0, 1.0);
   }
 
-  void addFractionInRoom(double t, double fractionInRoom) {
-    fractionInRoomOverTime.add(t, fractionInRoom);
-  }
-
-  void plotFractionInRoomOverTime(String plotFilePath) {
-    final XYSeriesCollection data = new XYSeriesCollection(fractionInRoomOverTime);
-    final JFreeChart chart = ChartFactory.createXYLineChart(
-        "Fraction of agents in room over time", // plot title
-        "Time",                                 // X-axis label
-        "Fraction of agents in room",           // Y-axis label
-        data,                                   // data to plot
-        PlotOrientation.VERTICAL,               // plot vertically
-        true,                                   // include legend
-        true,                                   // include tooltips
-        false                                   // don't include URLs
-    );
-    final ChartPanel chartPanel = new ChartPanel(chart);
-    chartPanel.setPreferredSize(new java.awt.Dimension(500, 250));
-    setContentPane(chartPanel);
-
-    try { // Try to save chart
-      ChartUtilities.saveChartAsPNG(new File(plotFilePath), chart, 500, 250);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
-  XYSeries getFractionInRoomOverTime() {
-    return fractionInRoomOverTime;
-  }
-
-  static void plotMultiple(ArrayList<XYSeries> allSeries) {
+  void plotMultiple(ArrayList<XYSeries> allSeries, String plotFilePath) {
     final NumberAxis domainAxis = new NumberAxis("Time");
     final ValueAxis rangeAxis = new NumberAxis("Fraction of Agents");
     final XYItemRenderer renderer0 = new XYLineAndShapeRenderer(true, false);
@@ -72,7 +39,22 @@ class Plotter extends ApplicationFrame {
     for (int i = 1; i < allSeries.size(); i++) {
       plot.setDataset(i, new XYSeriesCollection(allSeries.get(i)));
       plot.setRenderer(i, new XYLineAndShapeRenderer(true, false));
-      /*TODO: Finish this code, based on http://stackoverflow.com/questions/18789343/draw-a-multiple-plot-with-jfreechart-bar-xy*/
+    }
+    plot.setDatasetRenderingOrder(DatasetRenderingOrder.FORWARD);
+
+    NumberAxis domain = (NumberAxis) plot.getDomainAxis();
+    domain.setTickUnit(new NumberTickUnit(10.0));
+    domain.setVerticalTickLabels(true);
+
+    final JFreeChart chart = new JFreeChart("Fraction of Agents in Room over Time", JFreeChart.DEFAULT_TITLE_FONT, plot, true);
+    final ChartPanel panel = new ChartPanel(chart, true, true, true, true, true);
+    panel.setPreferredSize(new java.awt.Dimension(800, 600));
+    setContentPane(panel);
+    try { // Try to save chart
+      ChartUtilities.saveChartAsPNG(new File(plotFilePath), chart, 500, 250);
+      System.out.println("Saved plot to " + plotFilePath);
+    } catch (IOException e) {
+      e.printStackTrace();
     }
   }
 
