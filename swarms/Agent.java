@@ -18,16 +18,15 @@ class Agent {
   private double tLastUpdate;     // Simulation time at which agent's update() function was last called
   private double nextUpdateTime;  // Simulation time at which agent's update() function next needs to be called
 
-  // Constant parameters
-  private final double forceDecayConstant = 10.0; // Rate at which earlier social forces decay
-  private final double myForceWeight = 10.0;
-  private final double noiseFactor = 2;
+  // Constant parameters across all agents
+  private static final double myForceWeight = 10.0;
+  private static final double noiseFactor = 2;
 
   // Constant agent-specific parameters
   private final double mass, radius, maxSpeed;
 
-  // Simulation settings
-  private double frameRate, maxMove, numAgents;
+  // Simulation settings relevant for agents
+  private final double frameRate, maxMove, numAgents;
 
   private final int ID; // Index ID of this agent (0 <= ID < numAgents)
 
@@ -143,8 +142,8 @@ class Agent {
     // Make sure speed is at most maxSpeed
     if (getSpeed() > maxSpeed) vel = vel.normalize().times(maxSpeed);
 
-    // Let earlier social forces decay over time, once they have been incorporated into the velocity
-    socialForce = new Vector2D(0.0, 0.0); // socialForce.times(Math.exp(-forceDecayConstant*timeSinceUpdate));
+    // Remove earlier social forces once they have been incorporated into the velocity
+    socialForce = new Vector2D(0.0, 0.0);
 
   }
 

@@ -12,8 +12,8 @@ import org.jgrapht.traverse.BreadthFirstIterator;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * A room is modeled as a grid-shaped graph. Walls can be simulated by removing edges.
@@ -89,13 +89,10 @@ class Room {
 
     walls.add(wall);
 
-    Set<CellEdge> toRemove = new HashSet<>();
-
-    for (CellEdge e : roomGraph.edgeSet()) {
-      if (LineSegment2D.intersects(wall, e.asLineSegment())) {
-        toRemove.add(e);
-      }
-    }
+    Set<CellEdge> toRemove = roomGraph.edgeSet()
+                                      .stream()
+                                      .filter(e -> LineSegment2D.intersects(wall, e.asLineSegment()))
+                                      .collect(Collectors.toSet());
 
     roomGraph.removeAllEdges(toRemove);
 

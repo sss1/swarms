@@ -10,11 +10,10 @@ class Interactions {
   private static final double compressiveTolerance = 1.0; // Increase this to reduce how much repulsion increases with proximity
   private static final double repulsionStrength = 10.0; // Scalar weight of interpersonal repulsion term
   private static final double frictionStrength = 1.0; // Scalar weight of interpersonal friction term
+
   //    Speed attraction parameters:
   private static final double speedPenalty = 0.3; // Minimum difference in speeds for speed attraction to apply
   private static final double speedAttractWeight = 5.0; // Multiplicative weight for the speedAttraction term
-  //    Attraction parameters: TODO
-  //    Orientation parameters: TODO
 
   // Returns true if and only if agents a1 and a2 collide
   static boolean collision(Agent a1, Agent a2) {
