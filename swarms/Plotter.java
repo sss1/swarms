@@ -25,7 +25,6 @@ import java.util.ArrayList;
  */
 class Plotter extends ApplicationFrame {
 
-//  private final XYSeries fractionInRoomOverTime;
 
   Plotter(final String title) {
     super(title);
