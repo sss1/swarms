@@ -10,25 +10,31 @@ import java.util.PriorityQueue;
 
 public class SwarmSim {
 
-  // Simulation parameters
+  // Basic simulation parameters
   private static final double simDuration = 200.0; // Time (in seconds) to simulate
-  private static final int numAgents = 300;
-  private static final Point2D min = new Point2D(0.0, 0.0);         // Bottom left of room rectangle
-  private static final Point2D max = new Point2D(50.0, 50.0);     // Top right of the room rectangle
-  private static final Point2D agentMin = max.scale(0.01);    // Bottom left of rectangle in which agents start
-  private static final Point2D agentMax = max.scale(0.99); // Top right of rectangle in which agents start
+  private static final int numAgents = 300; // Number of agents in the simulation
+
+  // Parameters determining the size of the room
+  private static final Point2D min = new Point2D(0.0, 0.0);   // Bottom left of room rectangle
+  private static final Point2D max = new Point2D(50.0, 50.0); // Top right of the room rectangle
+
+  // Parameters determining starting positions of agents
+  private static final Point2D agentMin = max.scale(0.01);  // Bottom left of rectangle in which agents start
+  private static final Point2D agentMax = max.scale(0.99);  // Top right of rectangle in which agents start
+  private static final boolean asymmetricInitialAgentDistribution = false; // Whether the initial distribution of agents is highly asymmetric
+
+  // Parameters determining "fineness" of the simulation. These heavily affect runtime.
   private static final double maxMove = 0.1;    // Maximum distance an agent can move before needing to be updated
   private static final double frameRate = 1.0;  // Rate at which to save frames for plotting
   private static final double spatialResolution = 0.2;     // Resolution at which to model the room as a graph
-  private static final String movieFilePath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
-  private static final String plotFilePath = "/home/sss1/Desktop/obstacle_" + numAgents + "agents_" + simDuration + "seconds.png";
+  private static final double exitBufferDist = 100.0; // Distance beyond the exits that the room graph should cover
+
+  // Parameters determining the output of the simulation
 //  private static final String movieFilePath = "/home/painkiller/Desktop/out.mat";   // Output file from which to make MATLAB video
 //  private static final String plotFilePath = "/home/painkiller/Desktop/withoutSpeedAttract.png";
-  private static final double exitBufferDist = 100.0; // Distance beyond the exits that the room graph should cover
-  private static final boolean asymmetricInitialAgentDistribution = true; // Whether the initial distribution of agents is highly asymmetric
+  private static final String movieFilePath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
+  private static final String plotFilePath = "/home/sss1/Desktop/leftDoorSmall_" + numAgents + "agents_" + simDuration + "seconds.png";
   private static final boolean makeMovie = true;
-
-  // TODO: Make plotter X-axis go all the way to simDuration
 
   // Simulation state variables
   private static Agent[] agents;
@@ -39,18 +45,34 @@ public class SwarmSim {
   @SuppressWarnings("ConstantConditions") // Several constant variables are explicitly named here just for readability
   public static void main(String[] args) {
     final double leftDoorWidth = 1.0;
-    final double rightDoorWidth = 1.0;
+    final double rightDoorWidth = 10.0;
     final boolean hasObstacle = false;
-    boolean hasCommunication = false;
+
+    boolean hasOrient = false;
+    boolean hasAttract = false;
 
     ArrayList<XYSeries> allPlots = new ArrayList<>();
-    allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, "Without communication", hasCommunication));
-//    hasCommunication = true;
-//    allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, "With communication", hasCommunication));
-    (new Plotter("Test")).plotMultiple(allPlots, plotFilePath);
+
+    allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, "No communication", hasOrient, hasAttract));
+    hasOrient = true;
+    allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, "No attraction", hasOrient, hasAttract));
+    hasOrient = false; hasAttract = true;
+    allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, "No orientation", hasOrient, hasAttract));
+    hasOrient = true;
+    allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, "Full communication", hasOrient, hasAttract));
+
+
+    (new Plotter("Test", simDuration)).plotMultiple(allPlots, plotFilePath);
   }
 
-  private static XYSeries runTrial(double leftDoorWidth, double rightDoorWidth, boolean hasObstacle, String label, boolean hasCommunication) {
+  private static XYSeries runTrial(double leftDoorWidth,
+                                   double rightDoorWidth,
+                                   boolean hasObstacle,
+                                   String label,
+                                   boolean hasOrient,
+                                   boolean hasAttract) {
+
+    System.out.println("Preparing \"" + label + "\" condition...");
     System.out.println("Constructing agents...");
     initializeAgents();
     System.out.println("Constructing room...");
@@ -78,7 +100,7 @@ public class SwarmSim {
       nextAgent.update(t, room);
 
       // Add new social forces to appropriate agents
-      updateSocialForces(agents, nextAgent, hasCommunication);
+      updateSocialForces(agents, nextAgent, hasOrient, hasAttract);
 
       // Reinsert the agent back into the priority queue
       orderedAgents.add(nextAgent);
@@ -199,23 +221,26 @@ public class SwarmSim {
    * @param agents array of all agents, sorted by ID
    * @param updatedAgent ID of the agent that was just updated
    */
-  private static void updateSocialForces(Agent[] agents, Agent updatedAgent, boolean hasCommunication) {
+  private static void updateSocialForces(Agent[] agents, Agent updatedAgent, boolean hasOrient, boolean hasAttract) {
 
-    for (Agent agent : agents) {
+    if (agentIsInRoom(updatedAgent)) {
+      for (Agent agent : agents) {
 
-      // no self-interactions
-      if (agent.getID() == updatedAgent.getID()) { continue; }
+        // don't include self-interactions
+        if (agent.getID() != updatedAgent.getID()) {
 
-      if (Interactions.collision(agent, updatedAgent)) {
-        Interactions.push(updatedAgent, agent);
+          // Updated agent pushes away from colliding agents
+          if (Interactions.collision(agent, updatedAgent)) { Interactions.push(updatedAgent, agent); }
+
+          // Updated agent tries to orient with nearby agents
+          if (hasOrient) { Interactions.orient(agent, updatedAgent); }
+
+          // Updated agent is attracted to more quickly moving agents
+          if (hasAttract) { Interactions.speedAttract(agent, updatedAgent); }
+        }
+
       }
-      if (hasCommunication && agentIsInRoom(updatedAgent)) {
-        // Updated agent tries to orient with nearby agents
-        Interactions.orient(agent, updatedAgent);
 
-        // Updated agent is attracted to more quickly moving agents
-        Interactions.speedAttract(agent, updatedAgent);
-      }
     }
 
   }
