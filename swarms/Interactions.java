@@ -11,6 +11,10 @@ class Interactions {
   private static final double repulsionStrength = 10.0; // Scalar weight of interpersonal repulsion term
   private static final double frictionStrength = 1.0; // Scalar weight of interpersonal friction term
 
+  //    Orientation parameters
+  private static final double orientRange = 3.0; // Maximum distance between agents at which orientation applies
+  private static final double orientWeight = 0.1; // Multiplicative weight for orientation term
+
   //    Speed attraction parameters:
   private static final double speedPenalty = 0.3; // Minimum difference in speeds for speed attraction to apply
   private static final double speedAttractWeight = 5.0; // Multiplicative weight for the speedAttraction term
@@ -56,6 +60,12 @@ class Interactions {
     pushee.addForce(totalForce);
     pusher.addForce(totalForce.opposite());
 
+  }
+
+  static void orient(Agent orientor, Agent orientee) {
+    if (Point2D.distance(orientee.getPos(), orientee.getPos()) < orientRange) {
+      orientee.addForce(orientor.getVel().times(orientWeight));
+    }
   }
 
   static void speedAttract(Agent attractor, Agent attractee) {
