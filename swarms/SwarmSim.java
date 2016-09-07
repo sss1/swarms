@@ -25,8 +25,8 @@ public class SwarmSim {
 //  private static final String movieFilePath = "/home/painkiller/Desktop/out.mat";   // Output file from which to make MATLAB video
 //  private static final String plotFilePath = "/home/painkiller/Desktop/withoutSpeedAttract.png";
   private static final double exitBufferDist = 100.0; // Distance beyond the exits that the room graph should cover
-  private static final boolean asymmetricInitialAgentDistribution = false; // Whether the initial distribution of agents is highly asymmetric
-  private static final boolean makeMovie = false;
+  private static final boolean asymmetricInitialAgentDistribution = true; // Whether the initial distribution of agents is highly asymmetric
+  private static final boolean makeMovie = true;
 
   // TODO: Make plotter X-axis go all the way to simDuration
 
@@ -36,16 +36,17 @@ public class SwarmSim {
   private static Room room;
   private static Point2D roomBottomLeft, roomTopRight;
 
+  @SuppressWarnings("ConstantConditions") // Several constant variables are explicitly named here just for readability
   public static void main(String[] args) {
-    final double leftDoorWidth = 10.0;
-    final double rightDoorWidth = 10.0;
-    final boolean hasObstacle = true;
-//    boolean hasCommunication = false;
+    final double leftDoorWidth = 1.0;
+    final double rightDoorWidth = 1.0;
+    final boolean hasObstacle = false;
+    boolean hasCommunication = false;
 
     ArrayList<XYSeries> allPlots = new ArrayList<>();
-    allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, "Without communication", false));
+    allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, "Without communication", hasCommunication));
 //    hasCommunication = true;
-    allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, "With communication", true));
+//    allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, "With communication", hasCommunication));
     (new Plotter("Test")).plotMultiple(allPlots, plotFilePath);
   }
 
@@ -65,7 +66,7 @@ public class SwarmSim {
     XYSeries fractionInRoomOverTime = new XYSeries(label); // legend label of item to plot
     // Terminate the simulation when there are no agents left in the room or when the simulation duration has ended;
     // whichever comes first
-    while (t < simDuration && getFracInRoom(agents) >= 1.0/numAgents) {
+    while (t < simDuration && getNumInRoom(agents) >= 1.0) {
 
       // Get next agent to update from PriorityQueue
       Agent nextAgent = orderedAgents.poll();
@@ -108,11 +109,15 @@ public class SwarmSim {
   }
 
   private static double getFracInRoom(Agent[] agents) {
+    return getNumInRoom(agents) / numAgents;
+  }
+
+  private static double getNumInRoom(Agent[] agents) {
     double fracInRoom = 0.0;
     for (Agent agent : agents) {
       fracInRoom += agentIsInRoom(agent) ? 1.0 : 0.0;
     }
-    return fracInRoom / numAgents;
+    return fracInRoom;
   }
 
   private static void initializeAgents() {
@@ -120,11 +125,11 @@ public class SwarmSim {
     agents = new Agent[numAgents];
 
     // Store all the agents sorted by order in which they need to be next updated
-    orderedAgents = new PriorityQueue<>(numAgents, new AgentComparator());
+    orderedAgents = new PriorityQueue<>(Math.max(numAgents, 1), new AgentComparator());
 
     // Initialize the agents
     for (int i = 0; i < numAgents; i++) {
-      if (asymmetricInitialAgentDistribution && i > numAgents/10) {
+      if (asymmetricInitialAgentDistribution && i > numAgents/4) {
         Point2D shiftedAgentMax = new Point2D(agentMax.x()/4, agentMax.y());
         agents[i] = new Agent(i, agentMin, shiftedAgentMax, frameRate, maxMove, numAgents);
       } else {
@@ -201,17 +206,15 @@ public class SwarmSim {
       // no self-interactions
       if (agent.getID() == updatedAgent.getID()) { continue; }
 
-//      // no self-interactions or interactions with agents outside the room
-//      if (agent.getID() == updatedAgent.getID() || !agentIsInRoom(agent)) { continue; }
-
       if (Interactions.collision(agent, updatedAgent)) {
         Interactions.push(updatedAgent, agent);
       }
-      if (hasCommunication) {
+      if (hasCommunication && agentIsInRoom(updatedAgent)) {
+        // Updated agent tries to orient with nearby agents
+        Interactions.orient(agent, updatedAgent);
+
         // Updated agent is attracted to more quickly moving agents
-        if (agentIsInRoom(updatedAgent)) {
-          Interactions.speedAttract(agent, updatedAgent);
-        }
+        Interactions.speedAttract(agent, updatedAgent);
       }
     }
 
