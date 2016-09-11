@@ -11,8 +11,8 @@ import java.util.PriorityQueue;
 public class SwarmSim {
 
   // Basic simulation parameters
-  private static final double simDuration = 200.0; // Time (in seconds) to simulate
-  private static final int numAgents = 300; // Number of agents in the simulation
+  private static final double simDuration = 20.0; // Time (in seconds) to simulate
+  private static final int numAgents = 30; // Number of agents in the simulation
 
   // Parameters determining the size of the room
   private static final Point2D min = new Point2D(0.0, 0.0);   // Bottom left of room rectangle
@@ -33,7 +33,7 @@ public class SwarmSim {
 //  private static final String movieFilePath = "/home/painkiller/Desktop/out.mat";   // Output file from which to make MATLAB video
 //  private static final String plotFilePath = "/home/painkiller/Desktop/withoutSpeedAttract.png";
   private static final String movieFilePath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
-  private static final String plotFilePath = "/home/sss1/Desktop/leftDoorSmall_" + numAgents + "agents_" + simDuration + "seconds.png";
+  private static final String plotFilePath = "/home/sss1/Desktop/test_" + numAgents + "agents_" + simDuration + "seconds.png";
   private static final boolean makeMovie = true;
 
   // Simulation state variables
@@ -44,7 +44,7 @@ public class SwarmSim {
 
   @SuppressWarnings("ConstantConditions") // Several constant variables are explicitly named here just for readability
   public static void main(String[] args) {
-    final double leftDoorWidth = 1.0;
+    final double leftDoorWidth = 10.0;
     final double rightDoorWidth = 10.0;
     final boolean hasObstacle = false;
 
@@ -55,10 +55,8 @@ public class SwarmSim {
 
     allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, "No communication", hasOrient, hasAttract));
     hasOrient = true;
-    allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, "No attraction", hasOrient, hasAttract));
-    hasOrient = false; hasAttract = true;
-    allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, "No orientation", hasOrient, hasAttract));
-    hasOrient = true;
+    allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, "No speed", hasOrient, hasAttract));
+    hasAttract = true;
     allPlots.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, "Full communication", hasOrient, hasAttract));
 
 
@@ -76,7 +74,7 @@ public class SwarmSim {
     System.out.println("Constructing agents...");
     initializeAgents();
     System.out.println("Constructing room...");
-    initializeRoom(leftDoorWidth, rightDoorWidth, hasObstacle);
+    initializeRoom(leftDoorWidth, rightDoorWidth, hasObstacle, "Basic");
 
     // Run the simulation
     double t = 0.0;
@@ -165,7 +163,33 @@ public class SwarmSim {
 
   }
 
-  private static void initializeRoom(double leftDoorWidth, double rightDoorWidth, boolean hasObstacle) {
+  private static void buildGates8() {
+    Point2D min = new Point2D(-10.0, -15.0);
+    Point2D max = new Point2D(60.0, 60.0);
+    room = new Room(min, max, spatialResolution);
+    room.addWall(new LineSegment2D(0.0, 50.001, 55.0, 50.001)); // main top wall
+    room.addWall(new LineSegment2D(55.0001, 50.0, 50.001, 30.0)); // upper-right block right wall
+    room.addWall(new LineSegment2D(50.0, 29.999, 35.0, 29.999)); // upper-right block bottom wall
+    room.addWall(new LineSegment2D(35.001, 30.0, 30.001, 0.0)); // main corridor middle right wall
+    room.addWall(new LineSegment2D(30.0, 0.001, 55.0, -5.001)); // bottom corridor top wall
+    room.addWall(new LineSegment2D(55.001, -5.0, 50.001, -10.0)); // bottom corridor right end
+    room.addWall(new LineSegment2D(50.0, -10.001, 0.0, -0.001)); // main bottom wall
+    room.addWall(new LineSegment2D(-0.001, 0.0, -0.001, 50.0)); // main left wall
+    // TODO: Add doors/exits, interior walls, and reimplement communication in terms of graph distances
+  }
+
+  private static void initializeRoom(double leftDoorWidth, double rightDoorWidth, boolean hasObstacle, String roomType) {
+
+    if (roomType.equalsIgnoreCase("Gates8")) {
+      buildGates8();
+    } else if (roomType.equalsIgnoreCase("Basic")) {
+      buildBasic(leftDoorWidth, rightDoorWidth, hasObstacle);
+    } else {
+      throw new IllegalArgumentException("Room type must be one of \"Gates8\" or \"Basic\".");
+    }
+  }
+
+  private static void buildBasic(double leftDoorWidth, double rightDoorWidth, boolean hasObstacle) {
 
     double p = spatialResolution /10; // small perturbation to prevent endpoint bugs
 
@@ -184,12 +208,17 @@ public class SwarmSim {
     Point2D leftDoorUpper = new Point2D(bottomLeft.x(), topRight.y()/2 + leftDoorWidth/2.0);
     Point2D leftDoorLower = new Point2D(bottomLeft.x(), topRight.y()/2 - leftDoorWidth/2.0);
 
+    room.addExit(new Point2D(min.minus(rightShift).x() + p, max.y()/2));
+    room.addExit(new Point2D(max.plus(rightShift).x() - p, max.y()/2));
+
     room.addWall(new LineSegment2D(topRight, topLeft)); // top wall
     room.addWall(new LineSegment2D(topLeft, leftDoorUpper)); // upper left wall
     room.addWall(new LineSegment2D(leftDoorLower, bottomLeft)); // lower left wall
     room.addWall(new LineSegment2D(bottomLeft, bottomRight)); // bottom wall
     room.addWall(new LineSegment2D(bottomRight, rightDoorLower)); // lower right wall
     room.addWall(new LineSegment2D(rightDoorUpper, topRight)); // upper right wall
+
+    // Agents shouldn't know about the obstacle, to we update exit distances BEFORE adding the obstacle
     room.updateExitDistances();
     if (hasObstacle) {
       double horizontalObstacleOffset = 1.000001;
@@ -197,9 +226,6 @@ public class SwarmSim {
       Point2D obstacleLower = new Point2D(bottomLeft.x() + horizontalObstacleOffset, topLeft.y() * 0.4);
       room.addWall(new LineSegment2D(obstacleUpper, obstacleLower));
     }
-
-//    room.updateExitDistances();
-
   }
 
 
