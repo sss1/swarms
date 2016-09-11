@@ -38,6 +38,8 @@ class Room {
     int nCellsX = 1 + ((int) ((max.x() - min.x()) / fineness));
     int nCellsY = 1 + ((int) ((max.y() - min.y()) / fineness));
 
+    System.out.println("Total number of nodes: " + (nCellsX * nCellsY));
+
     roomGraph = new SimpleGraph<>(CellEdge.class);
 
     grid = new Cell[nCellsX][nCellsY]; // Temporary organization for easily adding grid edges
@@ -73,13 +75,17 @@ class Room {
 
     outside = new Cell(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
 
-    // Added two exits, one on the left and one on the right
     exits = new ArrayList<>();
-    exits.add(grid[0][(nCellsY - 1)/2]);
-    exits.add(grid[nCellsX - 1][(nCellsY - 1)/2]);
-
     walls = new ArrayList<>();
 
+  }
+
+  void addExit(Point2D exitLocation) {
+    Cell cell = getCellFromPosition(exitLocation);
+    if (Double.isInfinite(cell.getCoordinates().x())) { // If exit is outside graph, throw exception
+      throw new IllegalArgumentException("Cannot place an exit outside of the graph.");
+    }
+    exits.add(cell);
   }
 
   /**
@@ -217,7 +223,7 @@ class Room {
     }
 
     void setGradient() {
-      if (Double.isInfinite(coordinates.x())) { // If cell
+      if (Double.isInfinite(coordinates.x())) { // Gradient outside graph is zero
         this.gradient = new Vector2D(0.0, 0.0);
         return;
       }
