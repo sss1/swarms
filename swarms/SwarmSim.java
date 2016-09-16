@@ -163,21 +163,6 @@ public class SwarmSim {
 
   }
 
-  private static void buildGates8() {
-    Point2D min = new Point2D(-10.0, -15.0);
-    Point2D max = new Point2D(60.0, 60.0);
-    room = new Room(min, max, spatialResolution);
-    room.addWall(new LineSegment2D(0.0, 50.001, 55.0, 50.001)); // main top wall
-    room.addWall(new LineSegment2D(55.0001, 50.0, 50.001, 30.0)); // upper-right block right wall
-    room.addWall(new LineSegment2D(50.0, 29.999, 35.0, 29.999)); // upper-right block bottom wall
-    room.addWall(new LineSegment2D(35.001, 30.0, 30.001, 0.0)); // main corridor middle right wall
-    room.addWall(new LineSegment2D(30.0, 0.001, 55.0, -5.001)); // bottom corridor top wall
-    room.addWall(new LineSegment2D(55.001, -5.0, 50.001, -10.0)); // bottom corridor right end
-    room.addWall(new LineSegment2D(50.0, -10.001, 0.0, -0.001)); // main bottom wall
-    room.addWall(new LineSegment2D(-0.001, 0.0, -0.001, 50.0)); // main left wall
-    // TODO: Add doors/exits, interior walls, and reimplement communication in terms of graph distances
-  }
-
   private static void initializeRoom(double leftDoorWidth, double rightDoorWidth, boolean hasObstacle, String roomType) {
 
     if (roomType.equalsIgnoreCase("Gates8")) {
@@ -187,6 +172,41 @@ public class SwarmSim {
     } else {
       throw new IllegalArgumentException("Room type must be one of \"Gates8\" or \"Basic\".");
     }
+  }
+
+  private static void buildGates8() {
+    Point2D min = new Point2D(-10.0, -15.0);
+    Point2D max = new Point2D(60.0, 60.0);
+    room = new Room(min, max, spatialResolution);
+
+    // Construct out walls, going clockwise from top
+    room.addWall(new LineSegment2D(0.0, 50.001, 55.0, 50.001)); // main top wall
+    room.addWall(new LineSegment2D(55.001, 50.0, 50.001, 30.0)); // upper-right block right wall
+    room.addWall(new LineSegment2D(50.0, 29.999, 35.0, 29.999)); // upper-right block bottom wall
+    room.addWall(new LineSegment2D(35.001, 30.0, 30.001, 0.0)); // main corridor middle right wall
+    room.addWall(new LineSegment2D(30.0, 0.001, 55.0, -5.001)); // bottom corridor top wall
+    room.addWall(new LineSegment2D(55.001, -5.0, 50.001, -10.0)); // bottom corridor right end
+    room.addWall(new LineSegment2D(50.0, -10.001, 0.0, -0.001)); // main bottom wall
+    room.addWall(new LineSegment2D(-0.001, 0.0, -0.001, 50.0)); // main left wall
+
+    // Construct 8102 block
+    room.addWall(new LineSegment2D(10.001, 19.999, 24.999, 19.999)); // top
+    room.addWall(new LineSegment2D(24.999, 19.999, 19.999, 0.001)); // right
+    room.addWall(new LineSegment2D(19.999, 0.001, 10.001, 10.001)); // bottom
+    room.addWall(new LineSegment2D(10.001, 10.001, 10.001, 19.999)); // left
+
+    // Construct 8118 block: TODO
+    // Construct 8126 block: TODO
+
+    // Construct 8216 block
+    room.addWall(new LineSegment2D(35.001, 44.999, 44.999, 44.999)); // top
+    room.addWall(new LineSegment2D(44.999, 44.999, 39.999, 35.001)); // right
+    room.addWall(new LineSegment2D(39.999, 35.001, 30.001, 35.001)); // bottom
+    room.addWall(new LineSegment2D(30.001, 35.001, 35.001, 44.999)); // left
+
+
+
+    // TODO: Add doors/exits, interior walls, and reimplement communication in terms of graph distances
   }
 
   private static void buildBasic(double leftDoorWidth, double rightDoorWidth, boolean hasObstacle) {
