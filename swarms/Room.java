@@ -38,7 +38,7 @@ class Room {
     int nCellsX = 1 + ((int) ((max.x() - min.x()) / fineness));
     int nCellsY = 1 + ((int) ((max.y() - min.y()) / fineness));
 
-    System.out.println("Total number of nodes: " + (nCellsX * nCellsY));
+//    System.out.println("Total number of nodes: " + (nCellsX * nCellsY));
 
     roomGraph = new SimpleGraph<>(CellEdge.class);
 
@@ -145,7 +145,7 @@ class Room {
 
   private void logarithmizeDistance() {
     for (Cell cell : roomGraph.vertexSet()) {
-      cell.setDistToExit((cell.getDistToExit() > Double.MIN_VALUE) ? 200.0 * Math.log(cell.getDistToExit()) : 0.0);
+      cell.setDistToExit((cell.getDistToExit() > Double.MIN_VALUE) ? 20.0 * Math.log(cell.getDistToExit()) : 0.0);
     }
   }
 
