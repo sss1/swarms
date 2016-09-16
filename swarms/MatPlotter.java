@@ -85,7 +85,7 @@ class MatPlotter {
 
     try {
       new MatFileWriter(filepath, variableList);
-      System.out.println("Saved results to file: " + filepath);
+      System.out.println("Saved movie data to file: " + filepath);
     } catch (IOException e) {
       e.printStackTrace();
     }
