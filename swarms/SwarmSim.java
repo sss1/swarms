@@ -12,8 +12,8 @@ import java.util.PriorityQueue;
 public class SwarmSim {
 
   // Basic simulation parameters
-  private static final double simDuration = 200.0; // Time (in seconds) to simulate
-  private static final int numAgents = 100; // Number of agents in the simulation
+  private static final double simDuration = 250.0; // Time (in seconds) to simulate
+  private static final int numAgents = 300; // Number of agents in the simulation
 
   // Parameters determining the size of the room
   private static final Point2D min = new Point2D(0.0, 0.0);   // Bottom left of room rectangle
@@ -24,18 +24,19 @@ public class SwarmSim {
   private static final Point2D agentMax = max.scale(0.99);  // Top right of rectangle in which agents start
   private static final boolean asymmetricInitialAgentDistribution = false; // Whether the initial distribution of agents is highly asymmetric
 
-  // Parameters determining "fineness" of the simulation. These heavily affect runtime.
+  // Parameters determining "fineness" of the simulation.
+  // These heavily affect runtime, but, beyond a point, shouldn't affect results.
   private static final double maxMove = 0.1;    // Maximum distance an agent can move before needing to be updated
   private static final double frameRate = 1.0;  // Rate at which to save frames for plotting
-  private static final double spatialResolution = 0.5;     // Resolution at which to model the room as a graph; TODO: revert this to 0.2
+  private static final double spatialResolution = 0.3;     // Resolution at which to model the room as a graph; TODO: revert this to 0.2
   private static final double exitBufferDist = 100.0; // Distance beyond the exits that the room graph should cover
 
   // Parameters determining the output of the simulation
 //  private static final String movieFilePath = "/home/painkiller/Desktop/out.mat";   // Output file from which to make MATLAB video
 //  private static final String plotFilePath = "/home/painkiller/Desktop/withoutSpeedAttract.png";
   private static final String movieFilePath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
-  private static final String plotFilePath = "/home/sss1/Desktop/obstacle_" + numAgents + "agents_" + simDuration + "seconds.png";
-  private static final boolean makeMovie = true;
+  private static final String plotFilePath = "/home/sss1/Desktop/leftDoorSmall_" + numAgents + "agents_" + simDuration + "seconds.png";
+  private static final boolean makeMovie = false;
 
   private static final int numTrials = 10; // Number of trials over which to average results and compute error bars
 
@@ -47,9 +48,9 @@ public class SwarmSim {
 
   @SuppressWarnings("ConstantConditions") // Several constant variables are explicitly named here just for readability
   public static void main(String[] args) {
-    final double leftDoorWidth = 10.0;
+    final double leftDoorWidth = 1.0;
     final double rightDoorWidth = 10.0;
-    final boolean hasObstacle = true;
+    final boolean hasObstacle = false;
 
     boolean hasOrient = false;
     boolean hasAttract = false;
@@ -80,6 +81,18 @@ public class SwarmSim {
     return Plotter.averageTrials(resultsByTrial, label);
   }
 
+  /**
+   * Runs a single self-contained simulation and returns results detailing the fraction of agents in the room over time
+   * @param leftDoorWidth width of the left door (assuming a "Basic" room)
+   * @param rightDoorWidth width of the right door (assuming a "Basic" room)
+   * @param hasObstacle if true, the left door will have an obstacle in front of it (assuming a "Basic" room)
+   * @param label name of this condition (only used for labeling plots)
+   * @param hasOrient if true, the agents will use the orientation component of communication
+   * @param hasAttract if true, the agents will use the attraction component of communication
+   * @return XYSeries each X-value is a time between 0.0 and simDuration and each Y-value is a number in [0, 1]
+   * indicating the fraction of agents remaining in the rooms; if all agents escaped the room, the XYSeries should have
+   * numAgents items; else, the last item should be at time simDuration
+   */
   private static XYSeries runTrial(double leftDoorWidth,
                                    double rightDoorWidth,
                                    boolean hasObstacle,
@@ -143,11 +156,21 @@ public class SwarmSim {
     return fractionInRoomOverTime;
 
   }
-
+  /**
+   * Computes the fraction of agents remaining in the room; this is a minor convenience over getNumInRoom()
+   * @param agents array of numAgents agents in the simulation
+   * @return value of getNumInRoom() / numAgents
+   */
   private static double getFracInRoom(Agent[] agents) {
     return getNumInRoom(agents) / numAgents;
   }
 
+  /**
+   * Counts the number of agents remaining in the room
+   * @param agents array of numAgents agents in the simulation
+   * @return the number of agents remaining in the room, according to agentIsInRoom();
+   * the value is always an integer (up to round-off), despite the double type
+   */
   private static double getNumInRoom(Agent[] agents) {
     double fracInRoom = 0.0;
     for (Agent agent : agents) {
@@ -156,6 +179,9 @@ public class SwarmSim {
     return fracInRoom;
   }
 
+  /**
+   * Initialize numAgents Agents, stored in both an array and a PriorityQueue
+   */
   private static void initializeAgents() {
 
     agents = new Agent[numAgents];
@@ -190,6 +216,10 @@ public class SwarmSim {
     }
   }
 
+  /**
+   * Builds a room based on the floor plan of the 8th floor of the Gates Center for Computer Science at Carnegie Mellon
+   * University. This room has 3 exits and requires agents to navigate complex non-convex obstacles.
+   */
   private static void buildGates8() {
     roomBottomLeft = new Point2D(-10.0, -15.0);
     roomTopRight = new Point2D(60.0, 60.0);
@@ -253,9 +283,15 @@ public class SwarmSim {
 
 
 
-    // TODO: Add doors/exits, interior walls, and reimplement communication in terms of graph distances
+    // TODO: Add doors/exits, ensure Agents are initialized in valid spaces, and reimplement communication with graph distance
   }
 
+  /**
+   * Builds a simple rectangular room with two (not necessarily identical) exits (left and right).
+   * @param leftDoorWidth size of the left door
+   * @param rightDoorWidth size of the right door
+   * @param hasObstacle if true, there will be an obstacle in front of the left door
+   */
   private static void buildBasic(double leftDoorWidth, double rightDoorWidth, boolean hasObstacle) {
 
     double p = spatialResolution /10; // small perturbation to prevent endpoint bugs
