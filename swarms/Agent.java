@@ -39,8 +39,8 @@ class Agent {
 
     Random rand = new Random();
 
-    // These are somewhat arbitrary ranges, for now
-    mass = (65.0 + 10.0 * rand.nextDouble()/5)/10.0; // 65-75
+    // These are somewhat arbitrary ranges
+    mass = (65.0 + 10.0 * rand.nextDouble()/5)/10.0; // 6.5-7.5
     radius = 0.4 + (0.1 * rand.nextDouble()); // 0.4-0.5
     maxSpeed = 1.0 + 3.0 * rand.nextDouble(); // 1-4
 
