@@ -13,7 +13,7 @@ public class SwarmSim {
 
   // Basic simulation parameters
   private static final double simDuration = 250.0; // Time (in seconds) to simulate
-  private static final int numAgents = 300; // Number of agents in the simulation
+  private static final int numAgents = 30; // Number of agents in the simulation
 
   // Parameters determining the size of the room
   private static final Point2D min = new Point2D(0.0, 0.0);   // Bottom left of room rectangle
@@ -28,17 +28,17 @@ public class SwarmSim {
   // These heavily affect runtime, but, beyond a point, shouldn't affect results.
   private static final double maxMove = 0.1;    // Maximum distance an agent can move before needing to be updated
   private static final double frameRate = 1.0;  // Rate at which to save frames for plotting
-  private static final double spatialResolution = 0.3;     // Resolution at which to model the room as a graph; TODO: revert this to 0.2
+  private static final double spatialResolution = 0.2;     // Resolution at which to model the room as a graph
   private static final double exitBufferDist = 100.0; // Distance beyond the exits that the room graph should cover
 
   // Parameters determining the output of the simulation
 //  private static final String movieFilePath = "/home/painkiller/Desktop/out.mat";   // Output file from which to make MATLAB video
 //  private static final String plotFilePath = "/home/painkiller/Desktop/withoutSpeedAttract.png";
   private static final String movieFilePath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
-  private static final String plotFilePath = "/home/sss1/Desktop/leftDoorSmall_" + numAgents + "agents_" + simDuration + "seconds.png";
-  private static final boolean makeMovie = false;
+  private static final String plotFilePath = "/home/sss1/Desktop/obstacle_" + numAgents + "agents_" + simDuration + "seconds.png";
+  private static final boolean makeMovie = true;
 
-  private static final int numTrials = 10; // Number of trials over which to average results and compute error bars
+  private static final int numTrials = 1; // Number of trials over which to average results and compute error bars
 
   // Simulation state variables
   private static Agent[] agents;
@@ -48,9 +48,9 @@ public class SwarmSim {
 
   @SuppressWarnings("ConstantConditions") // Several constant variables are explicitly named here just for readability
   public static void main(String[] args) {
-    final double leftDoorWidth = 1.0;
+    final double leftDoorWidth = 10.0;
     final double rightDoorWidth = 10.0;
-    final boolean hasObstacle = false;
+    final boolean hasObstacle = true;
 
     boolean hasOrient = false;
     boolean hasAttract = false;
@@ -58,10 +58,12 @@ public class SwarmSim {
     ArrayList<XIntervalSeriesCollection> allPlots = new ArrayList<>();
 
     allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No communication", hasOrient, hasAttract));
-    hasOrient = true;
-    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No speed", hasOrient, hasAttract));
-    hasAttract = true;
-    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "Full communication", hasOrient, hasAttract));
+//    hasOrient = true;
+//    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No speed", hasOrient, hasAttract));
+//    hasOrient = false; hasAttract = true;
+//    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No bacterial", hasOrient, hasAttract));
+//    hasOrient = true;
+//    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "Full communication", hasOrient, hasAttract));
 
 
     (new Plotter("Test", simDuration)).plotMultiple(allPlots, plotFilePath);
@@ -76,7 +78,13 @@ public class SwarmSim {
     ArrayList<XYSeries> resultsByTrial = new ArrayList<>(numTrials);
     for (int i = 0; i < numTrials; i++) {
       System.out.print("Running trial " + i + " of \"" + label + "\" condition: ");
+      long startTime = System.nanoTime();
+
       resultsByTrial.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, label, hasOrient, hasAttract));
+
+      long endTime = System.nanoTime();
+      System.out.println("Took " + ((endTime - startTime)/(Math.pow(10, 9))) + " seconds...");
+
     }
     return Plotter.averageTrials(resultsByTrial, label);
   }
@@ -103,7 +111,7 @@ public class SwarmSim {
     System.out.print("Constructing agents... ");
     initializeAgents();
     System.out.print("Constructing room... ");
-    initializeRoom(leftDoorWidth, rightDoorWidth, hasObstacle, "Basic");
+    initializeRoom(leftDoorWidth, rightDoorWidth, hasObstacle, "Gates8");
 
     // Run the simulation
     double t = 0.0;
@@ -111,7 +119,7 @@ public class SwarmSim {
     if (makeMovie) {
       matPlotter = new MatPlotter(frameRate, agents, room);
     }
-    System.out.println("Starting simulation...");
+    System.out.print("Starting simulation... ");
     XYSeries fractionInRoomOverTime = new XYSeries(label); // legend label of item to plot
     // Terminate the simulation when there are no agents left in the room or when the simulation duration has ended;
     // whichever comes first
@@ -119,7 +127,7 @@ public class SwarmSim {
 
       // Get next agent to update from PriorityQueue
       Agent nextAgent = orderedAgents.poll();
-      boolean wasInRoom = agentIsInRoom(nextAgent);
+      boolean wasInRoom = agentIsInRoom(nextAgent); // record this so we can track when they leave the room
       t = nextAgent.getNextUpdateTime();
 //      if (t % 10.0 < 0.002) { System.out.println("The time is " + t); } // Print a bit every 10 timesteps
 
@@ -239,7 +247,9 @@ public class SwarmSim {
     Vector2D wallVec = new Vector2D(wallStart, wallEnd);
     wallVec = wallVec.times(1.0 - doorWidth8800/wallVec.norm()); // short wall by length doorWidth
     room.addWall(new LineSegment2D(wallStart, wallStart.plus(wallVec))); // bottom corridor top wall
+    room.addExit(new Point2D(40.0, 10.0));
 
+    // Remainder of outer structure
     room.addWall(new LineSegment2D(55.001, 0.001, 50.001, -10.0)); // bottom corridor right end
     room.addWall(new LineSegment2D(50.0, -10.001, 0.0, -0.001)); // main bottom wall
     room.addWall(new LineSegment2D(-0.001, 0.0, -0.001, 50.0)); // main left wall
@@ -262,6 +272,7 @@ public class SwarmSim {
     wallVec = new Vector2D(wallStart, wallEnd);
     wallVec = wallVec.times(1.0 - doorWidth8100/wallVec.norm()); // short wall by length doorWidth
     room.addWall(new LineSegment2D(wallStart, wallStart.plus(wallVec))); // top left
+    room.addExit(new Point2D(10.0, 35.0));
 
     // Construct 8126 block
     room.addWall(new LineSegment2D(25.001, 44.999, 34.999, 44.999)); // top
@@ -280,10 +291,11 @@ public class SwarmSim {
     wallVec = new Vector2D(wallStart, wallEnd);
     wallVec = wallVec.times(1.0 - doorWidth8807/wallVec.norm()); // short wall by length doorWidth
     room.addWall(new LineSegment2D(wallStart, wallStart.plus(wallVec))); // left
+    room.addExit(new Point2D(45.0, 40.0));
 
+    room.updateExitDistances();
 
-
-    // TODO: Add doors/exits, ensure Agents are initialized in valid spaces, and reimplement communication with graph distance
+    // TODO: Ensure Agents are initialized in valid spaces, and reimplement communication with graph distance
   }
 
   /**
