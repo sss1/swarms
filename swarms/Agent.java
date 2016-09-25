@@ -11,12 +11,13 @@ import java.util.Random;
 class Agent {
 
   // Time-varying agent parameters
-  private Point2D pos;           // agent's coordinates
+  private Point2D pos;            // agent's coordinates
   private Vector2D vel;           // agent's velocity (in m/s)
   private Vector2D socialForce;   // sum of social forces on agent (in Newtons)
   private Vector2D myForce;       // agent's own force (in Newtons)
   private double tLastUpdate;     // Simulation time at which agent's update() function was last called
   private double nextUpdateTime;  // Simulation time at which agent's update() function next needs to be called
+  private boolean exited = false;         // true if and only if the agent has left the room/
 
   // Constant parameters across all agents
   private static final double myForceWeight = 10.0;
@@ -59,6 +60,10 @@ class Agent {
   int getID() {
     return ID;
   }
+
+  void exit() { exited = true; }
+
+  boolean getExited() { return exited; }
 
   // Moves and accelerates the agent, updating its priority
   // It is crucial for synchrony that the Agent is removed and re-inserted
@@ -167,9 +172,7 @@ class Agent {
   /**
    * @return the current speed (i.e., norm of the velocity) of the agent
    */
-  double getSpeed() {
-    return vel.norm();
-  }
+  double getSpeed() { return exited ? Double.MAX_VALUE : vel.norm(); }
 
   /**
    * @return the current velocity of the agent

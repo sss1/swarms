@@ -12,6 +12,7 @@ import org.jgrapht.traverse.BreadthFirstIterator;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -74,6 +75,7 @@ class Room {
     }
 
     outside = new Cell(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
+    // TODO: Remove cell at infinity, now that agents stop once they leave the room
 
     exits = new ArrayList<>();
     walls = new ArrayList<>();
@@ -124,9 +126,15 @@ class Room {
     return asArray;
   }
 
-  Vector2D getGradient(Point2D position) {
-    return getCellFromPosition(position).getGradient();
+  Vector2D getGradient(Point2D position) { return getCellFromPosition(position).getGradient(); }
 
+  /**
+   * @param source point from which the gradient should start
+   * @param sink point where the gradient should lead
+   * @return norm
+   */
+  Vector2D getGradientBetween(Point2D source, Point2D sink) {
+    return getCellFromPosition(source).getGradientToCell(getCellFromPosition(sink));
   }
 
   /**
@@ -185,11 +193,13 @@ class Room {
     private final Point2D coordinates; // location of the cell
     private double distToExit;
     private Vector2D gradient;
+    private HashMap<Cell, Double> distMap; // Distance to each other cell
 
     Cell(double x, double y) {
       coordinates = new Point2D(x, y);
       distToExit = Double.POSITIVE_INFINITY;
       gradient = null;
+      distMap = new HashMap<>();
     }
 
     /**
@@ -207,6 +217,33 @@ class Room {
 
     Point2D getCoordinates() {
       return coordinates;
+    }
+
+    Vector2D getGradientToCell(Cell cell) {
+      gradient = new Vector2D(0.0, 0.0);
+
+      Collection<Cell> neighbors = Graphs.neighborListOf(roomGraph, this);
+      for (Cell neighbor : neighbors) {
+        // diffDistance is positive if the neighbor is closer to the exit than the current cell, and negative otherwise
+        double diffDistance = getDistToCell(cell) - neighbor.getDistToCell(cell);
+        gradient = gradient.plus((new Vector2D(coordinates, neighbor.getCoordinates())).times(diffDistance));
+      }
+      return gradient.times(1.0/neighbors.size()); // Divide by number of neighbors, to average
+    }
+
+    double getDistToCell(Cell cell) {
+      if (this.equals(cell)) { return 0.0; }
+      if (!distMap.containsKey(cell)) {
+        double minDist = Double.MAX_VALUE;
+        for (Cell neighbor : Graphs.neighborListOf(roomGraph, this)) {
+          double distToNeighbor = Point2D.distance(coordinates, neighbor.getCoordinates());
+          double distThroughNeighbor = neighbor.getDistToCell(cell) + distToNeighbor;
+          minDist = Math.min(minDist, distThroughNeighbor);
+        }
+        distMap.put(cell, minDist);
+      }
+      return distMap.get(cell);
+
     }
 
     double getDistToExit() {

@@ -68,11 +68,11 @@ class Interactions {
     }
   }
 
-  static void speedAttract(Agent attractor, Agent attractee) {
+  static void speedAttract(Agent attractor, Agent attractee, Room room) {
     double magnitude = attractor.getSpeed() - attractee.getSpeed() - speedPenalty;
     if (magnitude > Double.MIN_VALUE) {
-      Vector2D direction = (new Vector2D(attractee.getPos(), attractor.getPos())).normalize();
-      attractee.addForce(direction.times(speedAttractWeight * Math.max(magnitude, 0.0)));
+      Vector2D direction = room.getGradientBetween(attractee.getPos(), attractor.getPos()).normalize();
+      attractee.addForce(direction.times(speedAttractWeight * magnitude));
     }
   }
 

@@ -123,11 +123,10 @@ public class SwarmSim {
     XYSeries fractionInRoomOverTime = new XYSeries(label); // legend label of item to plot
     // Terminate the simulation when there are no agents left in the room or when the simulation duration has ended;
     // whichever comes first
-    while (t < simDuration && getNumInRoom(agents) >= 1.0) {
+    while (t < simDuration && !orderedAgents.isEmpty()) {
 
       // Get next agent to update from PriorityQueue
       Agent nextAgent = orderedAgents.poll();
-      boolean wasInRoom = agentIsInRoom(nextAgent); // record this so we can track when they leave the room
       t = nextAgent.getNextUpdateTime();
 //      if (t % 10.0 < 0.002) { System.out.println("The time is " + t); } // Print a bit every 10 timesteps
 
@@ -137,14 +136,14 @@ public class SwarmSim {
       // Add new social forces to appropriate agents
       updateSocialForces(agents, nextAgent, hasOrient, hasAttract);
 
-      // Reinsert the agent back into the priority queue
-      orderedAgents.add(nextAgent);
-
       // Track whether the agent left the room
       boolean isInRoom = agentIsInRoom(nextAgent);
-      if (wasInRoom && !isInRoom) {
-        double fracInRoom = getFracInRoom(agents);
-        fractionInRoomOverTime.add(t, fracInRoom);
+      if (isInRoom) {
+        // Reinsert the agent back into the priority queue
+        orderedAgents.add(nextAgent);
+      } else { // agent left the room;
+        nextAgent.exit();
+        fractionInRoomOverTime.add(t, getFracInRoom(agents));
       }
 
       if (makeMovie && t > matPlotter.getNextFrameTime()) {
@@ -350,10 +349,11 @@ public class SwarmSim {
    * @return true if the agent is still in the room, and false if it has left
    */
   private static boolean agentIsInRoom(Agent agent) {
-    return roomBottomLeft.x() <= agent.getPos().x() &&
+    return !agent.getExited() &&
+        (roomBottomLeft.x() <= agent.getPos().x() &&
         agent.getPos().x() <= roomTopRight.x() &&
         roomBottomLeft.y() <= agent.getPos().y() &&
-        agent.getPos().y() <= roomTopRight.y();
+        agent.getPos().y() <= roomTopRight.y());
   }
 
   /**
@@ -377,7 +377,7 @@ public class SwarmSim {
           if (hasOrient) { Interactions.orient(agent, updatedAgent); }
 
           // Updated agent is attracted to more quickly moving agents
-          if (hasAttract) { Interactions.speedAttract(agent, updatedAgent); }
+          if (hasAttract) { Interactions.speedAttract(agent, updatedAgent, room); }
         }
 
       }
