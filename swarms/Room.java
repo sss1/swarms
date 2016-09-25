@@ -18,6 +18,8 @@ import java.util.stream.Collectors;
 
 /**
  * A room is modeled as a grid-shaped graph. Walls can be simulated by removing edges.
+ * This allows distances and directions to be computed with respect to very general
+ * non-Euclidean topologies, such as non-convex spaces.
  * Created by sss1 on 7/28/16.
  */
 class Room {
@@ -129,12 +131,24 @@ class Room {
   Vector2D getGradient(Point2D position) { return getCellFromPosition(position).getGradient(); }
 
   /**
+   * Returns a vector pointing (according to the graph) from the source to the sink
    * @param source point from which the gradient should start
    * @param sink point where the gradient should lead
-   * @return norm
+   * @return graph gradient from source to sink
    */
   Vector2D getGradientBetween(Point2D source, Point2D sink) {
     return getCellFromPosition(source).getGradientToCell(getCellFromPosition(sink));
+  }
+
+
+  /**
+   * Returns the graph-based distance from the source to the sink
+   * @param source point from which the distance should be measured
+   * @param sink point to which the distance should be measured
+   * @return graph distance from source to sink
+   */
+  double getDistanceBetween(Point2D source, Point2D sink) {
+    return getCellFromPosition(source).getDistToCell(getCellFromPosition(sink));
   }
 
   /**

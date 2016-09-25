@@ -3,6 +3,11 @@ package swarms;
 import math.geom2d.Point2D;
 import math.geom2d.Vector2D;
 
+/**
+ * This class implements the details of each type of interaction (pushing, orienation, and speed-attraction)
+ * between agents. This is static because the rules governing interaction depend only (graph) distances between
+ * agents.
+ */
 class Interactions {
 
   // Interaction parameters:
@@ -30,7 +35,7 @@ class Interactions {
    * When two agents come into contact, one (the pusher) may push the other (the pushee).
    * This interaction has two components:
    *  1) The pusher can push against the pushee (repulsion)
-   *  2) If an agent is moving, they can drag the other agent with them (friction)
+   *  2) A moving agent can drag the other agent with them (friction)
    *
    *  Note that, due to Newton's third law of motion, equal but opposite forces are exerted on the pusher!
    *
@@ -62,12 +67,18 @@ class Interactions {
 
   }
 
-  static void orient(Agent orientor, Agent orientee) {
-    if (Point2D.distance(orientee.getPos(), orientee.getPos()) < orientRange) {
+  static void orient(Agent orientor, Agent orientee, Room room) {
+    if (room.getDistanceBetween(orientee.getPos(), orientee.getPos()) < orientRange) {
       orientee.addForce(orientor.getVel().times(orientWeight));
     }
   }
 
+  /**
+   * Agents (attractees) are attracted to other faster-moving agents (attractors)
+   * @param attractor (slow) agent being attracted to attractor
+   * @param attractee (fast) agent attracting attractee
+   * @param room Room object encoding ambient geometry of the room
+   */
   static void speedAttract(Agent attractor, Agent attractee, Room room) {
     double magnitude = attractor.getSpeed() - attractee.getSpeed() - speedPenalty;
     if (magnitude > Double.MIN_VALUE) {

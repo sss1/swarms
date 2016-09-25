@@ -374,7 +374,7 @@ public class SwarmSim {
           if (Interactions.collision(agent, updatedAgent)) { Interactions.push(updatedAgent, agent); }
 
           // Updated agent tries to orient with nearby agents
-          if (hasOrient) { Interactions.orient(agent, updatedAgent); }
+          if (hasOrient) { Interactions.orient(agent, updatedAgent, room); }
 
           // Updated agent is attracted to more quickly moving agents
           if (hasAttract) { Interactions.speedAttract(agent, updatedAgent, room); }
