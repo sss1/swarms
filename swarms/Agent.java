@@ -45,9 +45,11 @@ class Agent {
     radius = 0.4 + (0.1 * rand.nextDouble()); // 0.4-0.5
     maxSpeed = 1.0 + 1.0 * rand.nextDouble(); // 1-2
 
-    // Uniformly random valid initial position within rectangle determined by
-    // inputs
+    // Uniformly random valid initial position; continue generating positions until one is valid
     pos = new Point2D(min.x() + (max.x() - min.x()) * rand.nextDouble(), min.y() + (max.y() - min.y()) * rand.nextDouble());
+    while (!SwarmSim.startingPositionIsValid(pos)) {
+      pos = new Point2D(min.x() + (max.x() - min.x()) * rand.nextDouble(), min.y() + (max.y() - min.y()) * rand.nextDouble());
+    }
 
     // Uniformly random valid initial velocity within circle of radius maxSpeed
     vel = Vector2D.createPolar(maxSpeed * rand.nextDouble() / 10.0, 2.0 * Math.PI * rand.nextDouble());
@@ -83,7 +85,7 @@ class Agent {
 
   // Adds a new social acting upon the agent (e.g., due to a new collision).
   void addForce(Vector2D newForce) {
-    socialForce = socialForce.plus(newForce.times(1.0/numAgents));
+    socialForce = socialForce.plus(newForce);
   }
 
   // Returns the agent's radius, needed for plotting and checking collisions
@@ -141,6 +143,7 @@ class Agent {
   // change nextUpdateTime!
   private void accelerate(double time) {
     double timeSinceUpdate = time - tLastUpdate;
+//    System.out.println("My Force: " + myForce.norm() + "                    Social Force: " + socialForce.norm());
     Vector2D acc = myForce.times(myForceWeight).plus(socialForce.times(1/numAgents)).times(1/mass); // a = F/m
     vel = vel.plus(acc.times(timeSinceUpdate)); // dv = a*dt
 

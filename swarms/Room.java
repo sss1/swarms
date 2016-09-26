@@ -27,10 +27,12 @@ class Room {
   private Graph<Cell, CellEdge> roomGraph;
   private ArrayList<LineSegment2D> walls;
   private ArrayList<Cell> exits;
+  private ArrayList<Point2D> exactExitPositions; // the Cell versions of the exits loose some precision
   private final double fineness;
   private final Point2D min;
   private final Cell[][] grid;
-  private final Cell outside;
+
+  int numDestsComputed = 0; // TODO: TEMPVAR
 
 
   Room(Point2D min, Point2D max, double fineness) {
@@ -41,7 +43,7 @@ class Room {
     int nCellsX = 1 + ((int) ((max.x() - min.x()) / fineness));
     int nCellsY = 1 + ((int) ((max.y() - min.y()) / fineness));
 
-//    System.out.println("Total number of nodes: " + (nCellsX * nCellsY));
+    System.out.println("Total number of nodes: " + (nCellsX * nCellsY));
 
     roomGraph = new SimpleGraph<>(CellEdge.class);
 
@@ -76,19 +78,20 @@ class Room {
 
     }
 
-    outside = new Cell(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
-    // TODO: Remove cell at infinity, now that agents stop once they leave the room
-
     exits = new ArrayList<>();
+    exactExitPositions = new ArrayList<>();
     walls = new ArrayList<>();
 
   }
 
   void addExit(Point2D exitLocation) {
-    Cell cell = getCellFromPosition(exitLocation);
-    if (Double.isInfinite(cell.getCoordinates().x())) { // If exit is outside graph, throw exception
-      throw new IllegalArgumentException("Cannot place an exit outside of the graph.");
+    Cell cell;
+    try {
+      cell = getCellFromPosition(exitLocation);
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException("Tried to place an exit outside of the graph.");
     }
+    exactExitPositions.add(exitLocation);
     exits.add(cell);
   }
 
@@ -155,32 +158,55 @@ class Room {
    * Labels each cell with its distance to the nearest exit
    */
   void updateExitDistances() {
-    // For each exit, do a BFS. Upon reaching a vertex, set its distance to the minimum distance through each of its
+    // For each exit, do a BFS. Upon traversing a vertex, set its distance to the minimum distance through each of its
     // neighboring vertices.
     for (Cell exit : exits) {
       BreadthFirstIterator<Cell, CellEdge>  iterator = new BreadthFirstIterator<>(roomGraph, exit);
-      iterator.addTraversalListener(new labelingTraversalListener());
+      iterator.addTraversalListener(new ExitSearchListener());
       while (iterator.hasNext()) { iterator.next(); }
     }
-    logarithmizeDistance();
+//    logarithmizeDistance();
+    rootDistance();
+  }
+
+  private void computeDistancesToCell(Cell targetCell) {
+    // Compute distance from all cells to the target cell by running a
+    // BFS originating from the target cell
+    BreadthFirstIterator<Cell, CellEdge> iterator = new BreadthFirstIterator<>(roomGraph, targetCell);
+    iterator.addTraversalListener(new NodeSearchListener(targetCell));
+    while (iterator.hasNext()) { iterator.next(); }
+    numDestsComputed++;
+  }
+
+  private void rootDistance() {
+    for (Cell cell : roomGraph.vertexSet()) {
+      cell.setDistToExit(10*Math.pow(cell.getDistToExit(), 0.75));
+    }
   }
 
   private void logarithmizeDistance() {
     for (Cell cell : roomGraph.vertexSet()) {
-      cell.setDistToExit((cell.getDistToExit() > Double.MIN_VALUE) ? 20.0 * Math.log(cell.getDistToExit()) : 0.0);
+      cell.setDistToExit((cell.getDistToExit() > Double.MIN_VALUE) ? 200.0 * Math.log(cell.getDistToExit()) : 0.0);
     }
   }
 
   private Cell getCellFromPosition(Point2D position) {
     int idxX = (int) ((position.x() - min.x()) / fineness);
     if (idxX < 0 || idxX >= grid.length) {
-      return outside;
+      throw new IllegalArgumentException("Tried to get cell outside of map at coordinates: " + position);
     }
     int idxY = (int) ((position.y() - min.y()) / fineness);
     if (idxY < 0 || idxY >= grid[0].length) {
-      return outside;
+      throw new IllegalArgumentException("Tried to get cell outside of map at coordinates: " + position);
     }
     return grid[idxX][idxY];
+  }
+
+  boolean atExit(Point2D position, double tolerance) {
+    for (Point2D exitPosition : exactExitPositions) {
+      if (Point2D.distance(position, exitPosition) < tolerance) { return true; }
+    }
+    return false;
   }
 
   /**
@@ -226,38 +252,46 @@ class Room {
     public boolean equals(Object obj) {
       return obj != null &&
           getClass() == obj.getClass() &&
-          Point2D.distance(this.getCoordinates(), ((Cell) obj).getCoordinates()) < fineness / 10.0;
+          euclideanDistFrom((Cell) obj) < fineness / 10.0;
+    }
+
+    @Override
+    public String toString() {
+      return coordinates.toString();
+    }
+
+    double euclideanDistFrom(Cell targetCell) {
+      return Point2D.distance(this.getCoordinates(), targetCell.getCoordinates());
     }
 
     Point2D getCoordinates() {
       return coordinates;
     }
 
-    Vector2D getGradientToCell(Cell cell) {
+    void setDistToCell(Cell targetCell, double distance) {
+      distMap.put(targetCell, distance);
+//      System.out.println("Set distance of " + distance + " from cell at " + this.getCoordinates() + " to cell at " + targetCell.getCoordinates());
+    }
+
+    Vector2D getGradientToCell(Cell targetCell) {
       gradient = new Vector2D(0.0, 0.0);
 
+      // Compute all distances to this cell, if we haven't already done so
+      if (Double.isInfinite(getDistToCell(targetCell))) { computeDistancesToCell(targetCell); }
+
       Collection<Cell> neighbors = Graphs.neighborListOf(roomGraph, this);
+      // Note that, since the BFS starts from the target cell and traverses the whole
+      // graph, at most one BFS call can occur per node; this could still be horribly slow, however
       for (Cell neighbor : neighbors) {
         // diffDistance is positive if the neighbor is closer to the exit than the current cell, and negative otherwise
-        double diffDistance = getDistToCell(cell) - neighbor.getDistToCell(cell);
+        double diffDistance = getDistToCell(targetCell) - neighbor.getDistToCell(targetCell);
         gradient = gradient.plus((new Vector2D(coordinates, neighbor.getCoordinates())).times(diffDistance));
       }
       return gradient.times(1.0/neighbors.size()); // Divide by number of neighbors, to average
     }
 
-    double getDistToCell(Cell cell) {
-      if (this.equals(cell)) { return 0.0; }
-      if (!distMap.containsKey(cell)) {
-        double minDist = Double.MAX_VALUE;
-        for (Cell neighbor : Graphs.neighborListOf(roomGraph, this)) {
-          double distToNeighbor = Point2D.distance(coordinates, neighbor.getCoordinates());
-          double distThroughNeighbor = neighbor.getDistToCell(cell) + distToNeighbor;
-          minDist = Math.min(minDist, distThroughNeighbor);
-        }
-        distMap.put(cell, minDist);
-      }
-      return distMap.get(cell);
-
+    double getDistToCell(Cell targetCell) {
+      return (distMap.containsKey(targetCell)) ? distMap.get(targetCell) : Double.POSITIVE_INFINITY;
     }
 
     double getDistToExit() {
@@ -297,7 +331,7 @@ class Room {
 
   private class CellEdge {
 
-    private final LineSegment2D lineSegment;
+    private final LineSegment2D lineSegment; // We store this to check intersections with any walls that we add
     private final Cell c1, c2;
 
     CellEdge(Cell c1, Cell c2) {
@@ -322,7 +356,40 @@ class Room {
 
   }
 
-  private class labelingTraversalListener extends TraversalListenerAdapter<Cell, CellEdge> {
+  private class NodeSearchListener extends TraversalListenerAdapter<Cell, CellEdge> {
+
+    private Cell targetCell;
+
+    NodeSearchListener(Cell targetCell) {
+      super();
+      if (targetCell == null) {
+        throw new IllegalArgumentException("Trying to search for null cell!");
+      }
+      this.targetCell = targetCell;
+    }
+
+    @Override
+    public void vertexTraversed(VertexTraversalEvent<Cell> e) {
+      Cell cell = e.getVertex();
+      if (targetCell.equals(cell)) { // Base Case: all cells are distance 0.0 from themselves.
+        cell.setDistToCell(targetCell, 0.0);
+      } else {
+        // Otherwise, distance is based on the neighboring cell that is closest to target cell.
+        // Note that this works because we started the BFS at the target, so any strictly closer
+        // cells have already been visited
+        double minDist = Double.MAX_VALUE;
+        for (Cell neighbor : Graphs.neighborListOf(roomGraph, cell)) {
+          double distanceThroughNeighbor = neighbor.getDistToCell(targetCell) + cell.euclideanDistFrom(neighbor);
+          minDist = Math.min(minDist, distanceThroughNeighbor);
+        }
+        cell.setDistToCell(targetCell, minDist);
+      }
+
+    }
+
+  }
+
+  private class ExitSearchListener extends TraversalListenerAdapter<Cell, CellEdge> {
 
     @Override
     public void vertexTraversed(VertexTraversalEvent<Cell> e) {
@@ -331,10 +398,9 @@ class Room {
         cell.setDistToExit(0.0);
       } else { // otherwise, distance is based on the neighboring cell that is closest to an exit
         for (Cell neighbor : Graphs.neighborListOf(roomGraph, cell)) {
-          double distanceThroughNeighbor = neighbor.getDistToExit() +
-              Point2D.distance(cell.getCoordinates(), neighbor.getCoordinates());
+          double distanceThroughNeighbor = neighbor.getDistToExit() + cell.euclideanDistFrom(neighbor);
           cell.setDistToExit(Math.min(cell.getDistToExit(), distanceThroughNeighbor));
-          cell.resetGradient();
+          cell.resetGradient(); // Erases any cached gradient, forcing it to update next time getGradient() is called
         }
       }
     }
