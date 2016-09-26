@@ -20,8 +20,8 @@ class Agent {
   private boolean exited = false;         // true if and only if the agent has left the room/
 
   // Constant parameters across all agents
-  private static final double myForceWeight = 10.0;
-  private static final double noiseFactor = 2;
+  private static final double myForceWeight = 100.0;
+  private static final double noiseFactor = 0.2;
 
   // Constant agent-specific parameters
   private final double mass, radius, maxSpeed;
@@ -41,9 +41,9 @@ class Agent {
     Random rand = new Random();
 
     // These are somewhat arbitrary ranges
-    mass = (65.0 + 10.0 * rand.nextDouble()/5)/10.0; // 6.5-7.5
+    mass = (65.0 + 10.0 * rand.nextDouble()/5)/20.0; // 6.5-7.5
     radius = 0.4 + (0.1 * rand.nextDouble()); // 0.4-0.5
-    maxSpeed = 1.0 + 3.0 * rand.nextDouble(); // 1-4
+    maxSpeed = 1.0 + 1.0 * rand.nextDouble(); // 1-2
 
     // Uniformly random valid initial position within rectangle determined by
     // inputs
@@ -66,8 +66,8 @@ class Agent {
   boolean getExited() { return exited; }
 
   // Moves and accelerates the agent, updating its priority
-  // It is crucial for synchrony that the Agent is removed and re-inserted
-  // into the PriorityQueue whenever update() is called!
+  // It is crucial for synchrony that the Agent is removed from (and, if still
+  // in the room, re-inserted into) the PriorityQueue whenever update() is called!
   void update(double t, Room room) {
     updateIndividualForce(room);
     accelerate(t);
@@ -83,7 +83,7 @@ class Agent {
 
   // Adds a new social acting upon the agent (e.g., due to a new collision).
   void addForce(Vector2D newForce) {
-    socialForce = socialForce.plus(newForce);
+    socialForce = socialForce.plus(newForce.times(1.0/numAgents));
   }
 
   // Returns the agent's radius, needed for plotting and checking collisions
@@ -170,9 +170,10 @@ class Agent {
   }
 
   /**
-   * @return the current speed (i.e., norm of the velocity) of the agent
+   * @return the current speed (i.e., norm of the velocity) of the agent, or the agent's maximum possible speed if they
+   * have left the room
    */
-  double getSpeed() { return exited ? Double.MAX_VALUE : vel.norm(); }
+  double getSpeed() { return exited ? maxSpeed : vel.norm(); }
 
   /**
    * @return the current velocity of the agent
