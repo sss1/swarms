@@ -41,9 +41,9 @@ class Agent {
     Random rand = new Random();
 
     // These are somewhat arbitrary ranges
-    mass = (65.0 + 10.0 * rand.nextDouble()/5)/20.0; // 6.5-7.5
+    mass = (65.0 + 10.0 * rand.nextDouble())/5.0; // 13-15
     radius = 0.4 + (0.1 * rand.nextDouble()); // 0.4-0.5
-    maxSpeed = 1.0 + 1.0 * rand.nextDouble(); // 1-2
+    maxSpeed = 1.0 + 2.0 * rand.nextDouble(); // 1-3
 
     // Uniformly random valid initial position; continue generating positions until one is valid
     pos = new Point2D(min.x() + (max.x() - min.x()) * rand.nextDouble(), min.y() + (max.y() - min.y()) * rand.nextDouble());
