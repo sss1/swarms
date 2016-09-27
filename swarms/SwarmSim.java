@@ -122,8 +122,10 @@ public class SwarmSim {
     if (makeMovie) {
       matPlotter = new MatPlotter(frameRate, agents, room);
     }
-    System.out.print("Starting simulation... ");
+
     XYSeries fractionInRoomOverTime = new XYSeries(label); // legend label of item to plot
+
+    System.out.print("Starting simulation... ");
     // Terminate the simulation when there are no agents left in the room or when the simulation duration has ended;
     // whichever comes first
     while (t < simDuration && !orderedAgents.isEmpty()) {
@@ -302,7 +304,6 @@ public class SwarmSim {
 
     room.updateExitDistances();
 
-    // TODO: Ensure Agents are initialized in valid spaces
   }
 
 
@@ -342,12 +343,6 @@ public class SwarmSim {
   // An InnerRoom should:
   // 1) be constructable from a sequence of points (possibly with some indicator for doors
   // 2) be able to test whether a point is in its interior
-
-  private void addInnerRoom(ArrayList<Point2D> vertices, Room room) {
-    for (int i = 1; i < vertices.size(); i++) {
-
-    }
-  }
 
   /**
    * Builds a simple rectangular room with two (not necessarily identical) exits (left and right).
