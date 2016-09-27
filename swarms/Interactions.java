@@ -4,7 +4,7 @@ import math.geom2d.Point2D;
 import math.geom2d.Vector2D;
 
 /**
- * This class implements the details of each type of interaction (pushing, orienation, and speed-attraction)
+ * This class implements the details of each type of interaction (pushing, orientation, and speed-attraction)
  * between agents. This is static because the rules governing interaction depend only (graph) distances between
  * agents.
  */
