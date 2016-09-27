@@ -32,7 +32,7 @@ class Room {
   private final Point2D min;
   private final Cell[][] grid;
 
-  int numDestsComputed = 0; // TODO: TEMPVAR
+  int numDestsComputed = 0; // TODO: This is a temporary variable for printing; remove it.
 
 
   Room(Point2D min, Point2D max, double fineness) {
@@ -232,13 +232,13 @@ class Room {
 
     private final Point2D coordinates; // location of the cell
     private double distToExit;
-    private Vector2D gradient;
+    private Vector2D exitGradient;
     private HashMap<Cell, Double> distMap; // Distance to each other cell
 
     Cell(double x, double y) {
       coordinates = new Point2D(x, y);
       distToExit = Double.POSITIVE_INFINITY;
-      gradient = null;
+      exitGradient = null;
       distMap = new HashMap<>();
     }
 
@@ -274,7 +274,7 @@ class Room {
     }
 
     Vector2D getGradientToCell(Cell targetCell) {
-      gradient = new Vector2D(0.0, 0.0);
+      Vector2D gradient = new Vector2D(0.0, 0.0);
 
       // Compute all distances to this cell, if we haven't already done so
       if (Double.isInfinite(getDistToCell(targetCell))) { computeDistancesToCell(targetCell); }
@@ -303,29 +303,29 @@ class Room {
     }
 
     Vector2D getGradient() {
-      if (gradient == null) { setGradient(); }
-      return gradient;
+      if (exitGradient == null) { setGradient(); }
+      return exitGradient;
     }
 
     void setGradient() {
       if (Double.isInfinite(coordinates.x())) { // Gradient outside graph is zero
-        this.gradient = new Vector2D(0.0, 0.0);
+        this.exitGradient = new Vector2D(0.0, 0.0);
         return;
       }
 
-      gradient = new Vector2D(0.0, 0.0);
+      exitGradient = new Vector2D(0.0, 0.0);
 
       Collection<Cell> neighbors = Graphs.neighborListOf(roomGraph, this);
       for (Cell neighbor : neighbors) {
         // diffDistance is positive if the neighbor is closer to the exit than the current cell, and negative otherwise
         double diffDistance = distToExit - neighbor.getDistToExit();
-        gradient = gradient.plus((new Vector2D(coordinates, neighbor.getCoordinates())).times(diffDistance));
+        exitGradient = exitGradient.plus((new Vector2D(coordinates, neighbor.getCoordinates())).times(diffDistance));
       }
-      gradient = gradient.times(1.0/neighbors.size()); // Divide by number of neighbors, to average
+      exitGradient = exitGradient.times(1.0/neighbors.size()); // Divide by number of neighbors, to average
     }
 
     void resetGradient() {
-      gradient = null;
+      exitGradient = null;
     }
   }
 
