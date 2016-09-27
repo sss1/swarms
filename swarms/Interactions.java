@@ -22,7 +22,7 @@ class Interactions {
 
   //    Speed attraction parameters:
   private static final double speedPenalty = 0.3; // Minimum difference in speeds for speed attraction to apply
-  private static final double speedAttractWeight = 0.0001; // Multiplicative weight for the speedAttraction term
+  private static final double speedAttractWeight = 5.0; // Multiplicative weight for the speedAttraction term
 
   // Returns true if and only if agents a1 and a2 collide
   static boolean collision(Agent a1, Agent a2) {

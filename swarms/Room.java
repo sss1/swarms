@@ -151,7 +151,14 @@ class Room {
    * @return graph distance from source to sink
    */
   double getDistanceBetween(Point2D source, Point2D sink) {
-    return getCellFromPosition(source).getDistToCell(getCellFromPosition(sink));
+
+    Cell sourceCell = getCellFromPosition(source);
+    Cell sinkCell = getCellFromPosition(sink);
+
+    // Compute all distances to this cell, if we haven't already done so
+    if (Double.isInfinite(sourceCell.getDistToCell(sinkCell))) { computeDistancesToCell(sinkCell); }
+
+    return sourceCell.getDistToCell(sinkCell);
   }
 
   /**
@@ -270,7 +277,6 @@ class Room {
 
     void setDistToCell(Cell targetCell, double distance) {
       distMap.put(targetCell, distance);
-//      System.out.println("Set distance of " + distance + " from cell at " + this.getCoordinates() + " to cell at " + targetCell.getCoordinates());
     }
 
     Vector2D getGradientToCell(Cell targetCell) {

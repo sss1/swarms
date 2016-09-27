@@ -15,7 +15,7 @@ public class SwarmSim {
 
   // Basic simulation parameters
   private static final double simDuration = 250.0; // Time (in seconds) to simulate
-  private static final int numAgents = 100; // Number of agents in the simulation
+  private static final int numAgents = 200; // Number of agents in the simulation
 
   // Parameters determining the size of the room
   private static final Point2D min = new Point2D(0.0, 0.0);   // Bottom left of room rectangle
@@ -38,10 +38,10 @@ public class SwarmSim {
 //  private static final String movieFilePath = "/home/painkiller/Desktop/out.mat";   // Output file from which to make MATLAB video
 //  private static final String plotFilePath = "/home/painkiller/Desktop/withoutSpeedAttract.png";
   private static final String movieFilePath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
-  private static final String plotFilePath = "/home/sss1/Desktop/obstacle_" + numAgents + "agents_" + simDuration + "seconds.png";
-  private static final boolean makeMovie = true;
+  private static final String plotFilePath = "/home/sss1/Desktop/gates8_" + numAgents + "agents_" + simDuration + "seconds.png";
+  private static final boolean makeMovie = false;
 
-  private static final int numTrials = 1; // Number of trials over which to average results and compute error bars
+  private static final int numTrials = 10; // Number of trials over which to average results and compute error bars
 
   // Simulation state variables
   private static Agent[] agents;
@@ -55,11 +55,9 @@ public class SwarmSim {
     final double rightDoorWidth = 10.0;
     final boolean hasObstacle = true;
 
-    boolean hasOrient = false;
-    boolean hasAttract = false;
-
     ArrayList<XIntervalSeriesCollection> allPlots = new ArrayList<>();
 
+    boolean hasOrient = false; boolean hasAttract = false;
 //    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No communication", hasOrient, hasAttract));
 //    hasOrient = true;
 //    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No speed", hasOrient, hasAttract));
@@ -78,15 +76,21 @@ public class SwarmSim {
                                                      String label,
                                                      boolean hasOrient,
                                                      boolean hasAttract) {
+
+    System.out.print("Constructing room... ");
+    initializeRoom(leftDoorWidth, rightDoorWidth, hasObstacle);
+
     ArrayList<XYSeries> resultsByTrial = new ArrayList<>(numTrials);
     for (int i = 0; i < numTrials; i++) {
       System.out.print("Running trial " + i + " of \"" + label + "\" condition: ");
       long startTime = System.nanoTime();
 
-      resultsByTrial.add(runTrial(leftDoorWidth, rightDoorWidth, hasObstacle, label, hasOrient, hasAttract));
+      resultsByTrial.add(runTrial(label, hasOrient, hasAttract));
 
       long endTime = System.nanoTime();
       System.out.println("Took " + ((endTime - startTime)/(Math.pow(10, 9))) + " seconds...");
+
+      System.out.println("Computed " + room.numDestsComputed + " destinations.");
 
     }
     return Plotter.averageTrials(resultsByTrial, label);
@@ -94,9 +98,6 @@ public class SwarmSim {
 
   /**
    * Runs a single self-contained simulation and returns results detailing the fraction of agents in the room over time
-   * @param leftDoorWidth width of the left door (assuming a "Basic" room)
-   * @param rightDoorWidth width of the right door (assuming a "Basic" room)
-   * @param hasObstacle if true, the left door will have an obstacle in front of it (assuming a "Basic" room)
    * @param label name of this condition (only used for labeling plots)
    * @param hasOrient if true, the agents will use the orientation component of communication
    * @param hasAttract if true, the agents will use the attraction component of communication
@@ -104,17 +105,12 @@ public class SwarmSim {
    * indicating the fraction of agents remaining in the rooms; if all agents escaped the room, the XYSeries should have
    * numAgents items; else, the last item should be at time simDuration
    */
-  private static XYSeries runTrial(double leftDoorWidth,
-                                   double rightDoorWidth,
-                                   boolean hasObstacle,
-                                   String label,
+  private static XYSeries runTrial(String label,
                                    boolean hasOrient,
                                    boolean hasAttract) {
 
     System.out.print("Constructing agents... ");
     initializeAgents();
-    System.out.print("Constructing room... ");
-    initializeRoom(leftDoorWidth, rightDoorWidth, hasObstacle);
 
     // Run the simulation
     double t = 0.0;
@@ -133,7 +129,7 @@ public class SwarmSim {
       // Get next agent to update from PriorityQueue
       Agent nextAgent = orderedAgents.poll();
       t = nextAgent.getNextUpdateTime();
-      if (t % 1.0 < 0.002) { System.out.println("The time is " + t + ". Computed " + room.numDestsComputed + " destinations."); } // Print a bit every 10 timesteps
+//      if (t % 10.0 < 0.002) { System.out.println("The time is " + t + ". Computed " + room.numDestsComputed + " destinations."); } // Print a bit every 10 timesteps
 
       // Calculate forces, accelerate, move the agent, and update its priority
       nextAgent.update(t, room);
@@ -238,8 +234,8 @@ public class SwarmSim {
    * University. This room has 3 exits and requires agents to navigate complex non-convex obstacles.
    */
   private static void buildGates8() {
-    roomBottomLeft = new Point2D(-10.0, -15.0);
-    roomTopRight = new Point2D(60.0, 60.0);
+    roomBottomLeft = new Point2D(-1.0, -11.0);
+    roomTopRight = new Point2D(60.0, 51.0);
 
     room = new Room(roomBottomLeft, roomTopRight, spatialResolution);
 
