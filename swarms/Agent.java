@@ -17,7 +17,7 @@ class Agent {
   private Vector2D myForce;       // agent's own force (in Newtons)
   private double tLastUpdate;     // Simulation time at which agent's update() function was last called
   private double nextUpdateTime;  // Simulation time at which agent's update() function next needs to be called
-  private boolean exited = false;         // true if and only if the agent has left the room/
+  private boolean exited = false; // true if and only if the agent has left the room
 
   // Constant parameters across all agents
   private static final double myForceWeight = 100.0;
@@ -57,6 +57,7 @@ class Agent {
     socialForce = new Vector2D(0.0, 0.0);
     myForce = new Vector2D(0.0, 0.0);
     tLastUpdate = 0.0;
+    setNextUpdateTime(Math.min(maxMove / getSpeed(), frameRate * rand.nextDouble()));
   }
 
   int getID() {
@@ -143,7 +144,6 @@ class Agent {
   // change nextUpdateTime!
   private void accelerate(double time) {
     double timeSinceUpdate = time - tLastUpdate;
-//    System.out.println("My Force: " + myForce.norm() + "                    Social Force: " + socialForce.norm());
     Vector2D acc = myForce.times(myForceWeight).plus(socialForce.times(1/numAgents)).times(1/mass); // a = F/m
     vel = vel.plus(acc.times(timeSinceUpdate)); // dv = a*dt
 
@@ -164,7 +164,7 @@ class Agent {
     myForce = gradient.plus((new Vector2D(xNoise, yNoise)).times(noiseFactor * gradient.norm()));
   }
 
-  void setNextUpdateTime(double nextUpdateTime) {
+  private void setNextUpdateTime(double nextUpdateTime) {
     this.nextUpdateTime = nextUpdateTime;
   }
 

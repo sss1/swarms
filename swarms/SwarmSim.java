@@ -39,7 +39,7 @@ public class SwarmSim {
 //  private static final String plotFilePath = "/home/painkiller/Desktop/withoutSpeedAttract.png";
   private static final String movieFilePath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
   private static final String plotFilePath = "/home/sss1/Desktop/gates8_" + numAgents + "agents_" + simDuration + "seconds.png";
-  private static final boolean makeMovie = false;
+  private static final boolean makeMovie = true;
 
   private static final int numTrials = 10; // Number of trials over which to average results and compute error bars
 
@@ -211,7 +211,6 @@ public class SwarmSim {
         agents[i] = new Agent(i, agentMin, agentMax, frameRate, maxMove, numAgents);
       }
 
-      agents[i].setNextUpdateTime(Math.min(maxMove / agents[i].getSpeed(), frameRate));
       orderedAgents.add(agents[i]);
 
     }
