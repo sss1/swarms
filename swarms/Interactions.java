@@ -83,7 +83,9 @@ class Interactions {
     double magnitude = attractor.getSpeed() - attractee.getSpeed() - speedPenalty;
     if (magnitude > Double.MIN_VALUE) {
       Vector2D direction = room.getGradientBetween(attractee.getPos(), attractor.getPos()).normalize();
-      attractee.addForce(direction.times(speedAttractWeight * magnitude));
+      if (!Double.isNaN(direction.norm())) {
+        attractee.addForce(direction.times(speedAttractWeight * magnitude));
+      }
     }
   }
 
