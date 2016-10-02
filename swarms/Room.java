@@ -96,15 +96,22 @@ class Room {
   }
 
   /**
-   * Simulates a wall by removing any edges that cross the line segment between the two input points
+   * Simulates a wall by removing any edges that cross the input line segment
    */
   void addWall(LineSegment2D wall) {
 
     walls.add(wall);
 
+    // Extend the length of the wall by fineness for the purpose of determining which graph edges to remove;
+    // this helps prevent agents from getting stuck on the ends of walls
+    Vector2D extendedWallVector = new Vector2D(wall.firstPoint(), wall.lastPoint()).times(1 + fineness/wall.length());
+    Point2D extendedFirstPoint = new Point2D(wall.lastPoint().minus(extendedWallVector));
+    Point2D extendedLastPoint = new Point2D(wall.firstPoint().plus(extendedWallVector));
+    LineSegment2D extendedWall = new LineSegment2D(extendedFirstPoint, extendedLastPoint);
+
     Set<CellEdge> toRemove = roomGraph.edgeSet()
                                       .stream()
-                                      .filter(e -> LineSegment2D.intersects(wall, e.asLineSegment()))
+                                      .filter(e -> LineSegment2D.intersects(extendedWall, e.asLineSegment()))
                                       .collect(Collectors.toSet());
 
     roomGraph.removeAllEdges(toRemove);
@@ -188,12 +195,6 @@ class Room {
   private void rootDistance() {
     for (Cell cell : roomGraph.vertexSet()) {
       cell.setDistToExit(10*Math.pow(cell.getDistToExit(), 0.75));
-    }
-  }
-
-  private void logarithmizeDistance() {
-    for (Cell cell : roomGraph.vertexSet()) {
-      cell.setDistToExit((cell.getDistToExit() > Double.MIN_VALUE) ? 200.0 * Math.log(cell.getDistToExit()) : 0.0);
     }
   }
 
