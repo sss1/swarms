@@ -21,21 +21,20 @@ class Agent {
 
   // Constant parameters across all agents
   private static final double myForceWeight = 100.0;
-  private static final double noiseFactor = 0.2;
+  private static final double noiseFactor = 0.8;
 
   // Constant agent-specific parameters
   private final double mass, radius, maxSpeed;
 
   // Simulation settings relevant for agents
-  private final double frameRate, maxMove, numAgents;
+  private final double frameRate, maxMove;
 
   private final int ID; // Index ID of this agent (0 <= ID < numAgents)
 
-  Agent(int ID, Point2D min, Point2D max, double frameRate, double maxMove, int numAgents) {
+  Agent(int ID, Point2D min, Point2D max, double frameRate, double maxMove) {
 
     this.frameRate = frameRate;
     this.maxMove = maxMove;
-    this.numAgents = numAgents;
     this.ID = ID;
 
     Random rand = new Random();
@@ -135,7 +134,8 @@ class Agent {
       move = move.times((move.norm() - radius)/move.norm()); // shorten move to account for positive radius
       Vector2D wallAsVector = new Vector2D(collidingWall.firstPoint(), collidingWall.lastPoint()).normalize();
       // replace the velocity with its part parallel to the wall; i.e., kill its normal part
-      vel = wallAsVector.times(Vector2D.dot(vel, wallAsVector));
+      // redirect momentum to be parallel to the colliding wall
+      vel = wallAsVector.times(Math.signum(Vector2D.dot(vel, wallAsVector))).normalize().times(vel.norm());
     }
     pos = pos.plus(move);
   }
@@ -144,7 +144,7 @@ class Agent {
   // change nextUpdateTime!
   private void accelerate(double time) {
     double timeSinceUpdate = time - tLastUpdate;
-    Vector2D acc = myForce.times(myForceWeight).plus(socialForce.times(1/numAgents)).times(1/mass); // a = F/m
+    Vector2D acc = myForce.times(myForceWeight).plus(socialForce).times(1/mass); // a = F/m
     vel = vel.plus(acc.times(timeSinceUpdate)); // dv = a*dt
 
     // Make sure speed is at most maxSpeed
