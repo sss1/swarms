@@ -29,16 +29,17 @@ public class SwarmSim {
 
   // Parameters determining "fineness" of the simulation.
   // These heavily affect runtime, but, beyond a point, shouldn't affect results.
+  // Runtime and memory are O(1/spatialResolution^4), O(1/maxMove)
   private static final double maxMove = 0.1;    // Maximum distance an agent can move before needing to be updated
   private static final double frameRate = 1.0;  // Rate at which to save frames for plotting
-  private static final double spatialResolution = 0.5;     // Resolution at which to model the room as a graph; TODO: used to be 0.2
-  private static final double exitBufferDist = 100.0; // Distance beyond the exits that the room graph should cover
+  private static final double spatialResolution = 0.7;  // Resolution at which to model the room as a graph; TODO: used to be 0.2
+  private static final double exitBufferDist = 100.0;   // Distance beyond the exits that the room graph should cover
 
   // Parameters determining the output of the simulation
 //  private static final String movieFilePath = "/home/painkiller/Desktop/out.mat";   // Output file from which to make MATLAB video
 //  private static final String plotFilePath = "/home/painkiller/Desktop/withoutSpeedAttract.png";
   private static final String movieFilePath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
-  private static final String plotFilePath = "/home/sss1/Desktop/gates8_" + numAgents + "agents_" + simDuration + "seconds.png";
+  private static final String plotFilePath = "/home/sss1/Desktop/gates8/gates8_obstacle_" + numAgents + "agents_" + simDuration + "seconds.png";
   private static final boolean makeMovie = true;
 
   private static final int numTrials = 10; // Number of trials over which to average results and compute error bars
@@ -58,13 +59,13 @@ public class SwarmSim {
     ArrayList<XIntervalSeriesCollection> allPlots = new ArrayList<>();
 
     boolean hasOrient = false; boolean hasAttract = false;
-//    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No communication", hasOrient, hasAttract));
-//    hasOrient = true;
-//    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No speed", hasOrient, hasAttract));
+    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No communication", hasOrient, hasAttract));
+    hasOrient = true;
+    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No speed", hasOrient, hasAttract));
     hasOrient = false; hasAttract = true;
     allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No bacterial", hasOrient, hasAttract));
-//    hasOrient = true;
-//    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "Full communication", hasOrient, hasAttract));
+    hasOrient = true;
+    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "Full communication", hasOrient, hasAttract));
 
 
     (new Plotter("Test", simDuration)).plotMultiple(allPlots, plotFilePath);
@@ -206,9 +207,9 @@ public class SwarmSim {
     for (int i = 0; i < numAgents; i++) {
       if (asymmetricInitialAgentDistribution && i > numAgents/4) {
         Point2D shiftedAgentMax = new Point2D(agentMax.x()/4, agentMax.y());
-        agents[i] = new Agent(i, agentMin, shiftedAgentMax, frameRate, maxMove, numAgents);
+        agents[i] = new Agent(i, agentMin, shiftedAgentMax, frameRate, maxMove);
       } else {
-        agents[i] = new Agent(i, agentMin, agentMax, frameRate, maxMove, numAgents);
+        agents[i] = new Agent(i, agentMin, agentMax, frameRate, maxMove);
       }
 
       orderedAgents.add(agents[i]);
@@ -220,11 +221,9 @@ public class SwarmSim {
   private static void initializeRoom(double leftDoorWidth, double rightDoorWidth, boolean hasObstacle) {
 
     if (roomType == RoomType.GATES8) {
-      buildGates8();
+      buildGates8(hasObstacle);
     } else if (roomType == RoomType.BASIC) {
       buildBasic(leftDoorWidth, rightDoorWidth, hasObstacle);
-    } else {
-      throw new IllegalArgumentException("Room type must be one of \"Gates8\" or \"Basic\".");
     }
   }
 
@@ -232,7 +231,7 @@ public class SwarmSim {
    * Builds a room based on the floor plan of the 8th floor of the Gates Center for Computer Science at Carnegie Mellon
    * University. This room has 3 exits and requires agents to navigate complex non-convex obstacles.
    */
-  private static void buildGates8() {
+  private static void buildGates8(boolean hasObstacle) {
     roomBottomLeft = new Point2D(-1.0, -11.0);
     roomTopRight = new Point2D(60.0, 51.0);
 
@@ -298,6 +297,10 @@ public class SwarmSim {
     room.addExit(new Point2D(38.0, 37.5));
 
     room.updateExitDistances();
+
+    if (hasObstacle) {
+      room.addWall(new LineSegment2D(0.0, 35.001, 5.0, 35.001));
+    }
 
   }
 
