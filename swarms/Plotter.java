@@ -37,14 +37,14 @@ class Plotter extends ApplicationFrame {
     final NumberAxis domainAxis = new NumberAxis("Time");
     final ValueAxis rangeAxis = new NumberAxis("Fraction of Agents");
     final XYErrorRenderer renderer0 = new XYErrorRenderer();
-    renderer0.setSeriesStroke(0, new BasicStroke(1.0f));
+    renderer0.setSeriesStroke(0, new BasicStroke(1.5f));
     renderer0.setSeriesLinesVisible(0, true);
     renderer0.setSeriesShapesVisible(0, false);
     XYPlot plot = new XYPlot(allSeries.get(0), domainAxis, rangeAxis, renderer0);
     for (int i = 1; i < allSeries.size(); i++) {
       plot.setDataset(i, allSeries.get(i));
       final XYErrorRenderer renderer = new XYErrorRenderer();
-      renderer.setSeriesStroke(0, new BasicStroke(1.0f));
+      renderer.setSeriesStroke(0, new BasicStroke(1.5f));
       renderer.setSeriesLinesVisible(0, true);
       renderer.setSeriesShapesVisible(0, false);
       plot.setRenderer(i, renderer);
