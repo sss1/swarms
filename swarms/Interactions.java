@@ -17,8 +17,8 @@ class Interactions {
   private static final double frictionStrength = 1.0; // Scalar weight of interpersonal friction term
 
   //    Orientation parameters
-  private static final double orientRange = 3.0; // Maximum distance between agents at which orientation applies
-  private static final double orientWeight = 0.1; // Multiplicative weight for orientation term
+  private static final double orientRange = 2.0; // Maximum distance between agents at which orientation applies
+  private static final double orientWeight = 1.0; // Multiplicative weight for orientation term
 
   //    Speed attraction parameters:
   private static final double speedPenalty = 0.3; // Minimum difference in speeds for speed attraction to apply
@@ -68,7 +68,13 @@ class Interactions {
   }
 
   static void orient(Agent orientor, Agent orientee, Room room) {
-    if (room.getDistanceBetween(orientee.getPos(), orientee.getPos()) < orientRange) {
+    if (Point2D.distance(orientor.getPos(), orientee.getPos()) > orientRange) {
+      // Since Euclidean distance is much faster to compute than graph distance and is always shorter than graph
+      // distance, check this first
+      return;
+    }
+    if (room.getDistanceBetween(orientee.getPos(), orientee.getPos()) < orientRange
+        && orientor.getSpeed() - orientee.getSpeed() > speedPenalty) {
       orientee.addForce(orientor.getVel().times(orientWeight));
     }
   }

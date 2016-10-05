@@ -20,7 +20,7 @@ public class SwarmSim {
   // Parameters determining the size of the room
   private static final Point2D min = new Point2D(0.0, 0.0);   // Bottom left of room rectangle
   private static final Point2D max = new Point2D(50.0, 50.0); // Top right of the room rectangle
-  private static final RoomType roomType = RoomType.BASIC;
+  private static final RoomType roomType = RoomType.GATES8;
 
   // Parameters determining starting positions of agents
   private static final Point2D agentMin = max.scale(0.01).plus(new Vector2D(0.0, (roomType == RoomType.GATES8) ? -10.0 : 0.0));  // Bottom left of rectangle in which agents start
@@ -32,15 +32,16 @@ public class SwarmSim {
   // Runtime and memory are O(1/spatialResolution^4) and O(1/maxMove)
   private static final double maxMove = 0.1;    // Maximum distance an agent can move before needing to be updated
   private static final double frameRate = 1.0;  // Rate at which to save frames for plotting
-  private static final double spatialResolution = 0.6;  // Resolution at which to model the room as a graph; TODO: used to be 0.2
+  private static final double spatialResolution = 0.5;  // Resolution at which to model the room as a graph; TODO: used to be 0.2
   private static final double exitBufferDist = 2.0;   // Distance beyond the exits that the room graph should cover
 
   // Parameters determining the output of the simulation
 //  private static final String movieFilePath = "/home/painkiller/Desktop/out.mat";   // Output file from which to make MATLAB video
 //  private static final String plotFilePath = "/home/painkiller/Desktop/withoutSpeedAttract.png";
-  private static final String movieFilePath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
-  private static final String plotFilePath = "/home/sss1/Desktop/gates8/basic_" + numAgents + "agents_" + simDuration + "seconds.png";
   private static final boolean makeMovie = true;
+  private static final String movieFilePath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
+  private static final boolean makePlot = true;
+  private static final String plotFilePath = "/home/sss1/Desktop/gates8/" + roomType + "_" + numAgents + "agents_" + simDuration + "seconds.png";
 
   private static final int numTrials = 10; // Number of trials over which to average results and compute error bars
 
@@ -54,7 +55,7 @@ public class SwarmSim {
   public static void main(String[] args) {
     final double leftDoorWidth = 10.0;
     final double rightDoorWidth = 10.0;
-    final boolean hasObstacle = false;
+    final boolean hasObstacle = true;
 
     ArrayList<XIntervalSeriesCollection> allPlots = new ArrayList<>();
 
@@ -67,8 +68,9 @@ public class SwarmSim {
     hasOrient = true; hasAttract = true;
     allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "Full communication", hasOrient, hasAttract));
 
-
-    (new Plotter("Test", simDuration)).plotMultiple(allPlots, plotFilePath);
+    if (makePlot) {
+      (new Plotter("Test", simDuration)).plotMultiple(allPlots, plotFilePath);
+    }
   }
 
   private static XIntervalSeriesCollection runTrials(double leftDoorWidth,
@@ -83,7 +85,7 @@ public class SwarmSim {
 
     ArrayList<XYSeries> resultsByTrial = new ArrayList<>(numTrials);
     for (int i = 0; i < numTrials; i++) {
-      System.out.print("Running trial " + i + " of \"" + label + "\" condition: ");
+      System.out.print("\n\nRunning trial " + i + " of \"" + label + "\" condition: ");
       long startTime = System.nanoTime();
 
       resultsByTrial.add(runTrial(label, hasOrient, hasAttract));
@@ -146,7 +148,6 @@ public class SwarmSim {
         orderedAgents.add(nextAgent);
 
       } else { // agent left the room;
-//        System.out.println("An agent left at " + nextAgent.getPos());
         nextAgent.exit();
         fractionInRoomOverTime.add(t, getFracInRoom(agents));
       }
@@ -207,9 +208,9 @@ public class SwarmSim {
     for (int i = 0; i < numAgents; i++) {
       if (asymmetricInitialAgentDistribution && i > numAgents/4) {
         Point2D shiftedAgentMax = new Point2D(agentMax.x()/4, agentMax.y());
-        agents[i] = new Agent(i, agentMin, shiftedAgentMax, frameRate, maxMove);
+        agents[i] = new Agent(i, agentMin, shiftedAgentMax, frameRate, maxMove, numAgents);
       } else {
-        agents[i] = new Agent(i, agentMin, agentMax, frameRate, maxMove);
+        agents[i] = new Agent(i, agentMin, agentMax, frameRate, maxMove, numAgents);
       }
 
       orderedAgents.add(agents[i]);
@@ -380,7 +381,7 @@ public class SwarmSim {
     // Agents shouldn't know about the obstacle, to we update exit distances BEFORE adding the obstacle
     room.updateExitDistances();
     if (hasObstacle) {
-      double horizontalObstacleOffset = 0.4000001;
+      double horizontalObstacleOffset = 1.001;
       Point2D obstacleUpper = new Point2D(bottomLeft.x() + horizontalObstacleOffset, topLeft.y() * 0.6);
       Point2D obstacleLower = new Point2D(bottomLeft.x() + horizontalObstacleOffset, topLeft.y() * 0.4);
       room.addWall(new LineSegment2D(obstacleUpper, obstacleLower));
@@ -422,13 +423,13 @@ public class SwarmSim {
       // don't include self-interactions
       if (agent.getID() != updatedAgent.getID()) {
 
-        // Updated agent pushes away from colliding agents
-        if (!agent.getExited() && Interactions.collision(agent, updatedAgent)) {
-            Interactions.push(updatedAgent, agent);
-        }
+        if (!agent.getExited()) { // exited agents don't communicate orientation or repulsion
+          // Updated agent pushes away from colliding agents
+          if (Interactions.collision(agent, updatedAgent)) { Interactions.push(updatedAgent, agent); }
 
-        // Updated agent tries to orient with nearby agents
-        if (hasOrient) { Interactions.orient(agent, updatedAgent, room); }
+          // Updated agent tries to orient with nearby agents
+          if (hasOrient) { Interactions.orient(agent, updatedAgent, room); }
+        }
 
         // Updated agent is attracted to more quickly moving agents
         if (hasAttract) { Interactions.speedAttract(agent, updatedAgent, room); }

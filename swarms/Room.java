@@ -5,6 +5,8 @@ import math.geom2d.Vector2D;
 import math.geom2d.line.LineSegment2D;
 import org.jgrapht.Graph;
 import org.jgrapht.Graphs;
+import org.jgrapht.UndirectedGraph;
+import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.event.TraversalListenerAdapter;
 import org.jgrapht.event.VertexTraversalEvent;
 import org.jgrapht.graph.SimpleGraph;
@@ -74,9 +76,10 @@ class Room {
           roomGraph.addEdge(here, top, new CellEdge(here, top)); // add edge to top
         }
       }
-
-
     }
+
+    // The current implementation is not guaranteed to support disconnected graphs.
+    assert (new ConnectivityInspector((UndirectedGraph) roomGraph)).isGraphConnected();
 
     exits = new ArrayList<>();
     exactExitPositions = new ArrayList<>();
@@ -185,6 +188,8 @@ class Room {
   }
 
   private void computeDistancesToCell(Cell targetCell) {
+    assert !targetCell.alreadyComputed;
+    targetCell.alreadyComputed = true;
     // Compute distance from all cells to the target cell by running a
     // BFS originating from the target cell
     BreadthFirstIterator<Cell, CellEdge> iterator = new BreadthFirstIterator<>(roomGraph, targetCell);
@@ -243,6 +248,7 @@ class Room {
     private double distToExit;
     private Vector2D exitGradient;
     private HashMap<Cell, Double> distMap; // Distance to each other cell
+    boolean alreadyComputed = false;
 
     Cell(double x, double y) {
       coordinates = new Point2D(x, y);
@@ -255,7 +261,7 @@ class Room {
      * Two non-null Cells are equal if they occupy the same coordinate (i.e., if
      * their distance is strictly less than fineness).
      * @param obj Cell to which to test equality with this
-     * @return true if this and obj are equal
+     * @return true if this and obj are both non-null cells and are equal
      */
     @Override
     public boolean equals(Object obj) {
@@ -278,6 +284,7 @@ class Room {
     }
 
     void setDistToCell(Cell targetCell, double distance) {
+      assert !Double.isInfinite(distance);
       distMap.put(targetCell, distance);
     }
 
@@ -377,6 +384,7 @@ class Room {
   private class NodeSearchListener extends TraversalListenerAdapter<Cell, CellEdge> {
 
     private Cell targetCell;
+    public int numCellsReached = 0;
 
     NodeSearchListener(Cell targetCell) {
       super();
@@ -389,6 +397,7 @@ class Room {
     @Override
     public void vertexTraversed(VertexTraversalEvent<Cell> e) {
       Cell cell = e.getVertex();
+      numCellsReached++;
       if (targetCell.equals(cell)) { // Base Case: all cells are distance 0.0 from themselves.
         cell.setDistToCell(targetCell, 0.0);
       } else {
@@ -412,7 +421,7 @@ class Room {
           cell.setDistToCell(targetCell, minDist);
         }
       }
-
+      assert !Double.isInfinite(cell.getDistToCell(targetCell));
     }
 
   }
@@ -439,6 +448,7 @@ class Room {
           cell.setDistToExit(Math.min(cell.getDistToExit(), distanceThroughNeighbor));
           cell.resetGradient(); // Erases any cached gradient, forcing it to update next time getGradient() is called
         }
+
       }
     }
 

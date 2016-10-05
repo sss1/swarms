@@ -20,27 +20,27 @@ class Agent {
   private boolean exited = false; // true if and only if the agent has left the room
 
   // Constant parameters across all agents
-  private static final double myForceWeight = 100.0;
+  private static final double myForceWeight = 10.0;
   private static final double noiseFactor = 0.5;
 
   // Constant agent-specific parameters
   private final double mass, radius, maxSpeed;
-
-  // Simulation settings relevant for agents
-  private final double frameRate, maxMove;
-
   private final int ID; // Index ID of this agent (0 <= ID < numAgents)
 
-  Agent(int ID, Point2D min, Point2D max, double frameRate, double maxMove) {
+  // Simulation settings relevant for agents
+  private final double frameRate, maxMove, numAgents;
 
+  Agent(int ID, Point2D min, Point2D max, double frameRate, double maxMove, int numAgents) {
+
+    this.ID = ID;
     this.frameRate = frameRate;
     this.maxMove = maxMove;
-    this.ID = ID;
+    this.numAgents = numAgents;
 
     Random rand = new Random();
 
     // These are somewhat arbitrary ranges
-    mass = (65.0 + 10.0 * rand.nextDouble())/5.0; // 13-15
+    mass = (65.0 + 10.0 * rand.nextDouble())/100.0; // 13-15
     radius = 0.4 + (0.1 * rand.nextDouble()); // 0.4-0.5
     maxSpeed = 1.0 + 2.0 * rand.nextDouble(); // 1-3
 
@@ -63,7 +63,7 @@ class Agent {
     return ID;
   }
 
-  void exit() { vel = new Vector2D(0.0, 0.0); exited = true; }
+  void exit() { assert !exited; exited = true; }
 
   boolean getExited() { return exited; }
 
@@ -136,7 +136,7 @@ class Agent {
       Vector2D wallAsVector = new Vector2D(collidingWall.firstPoint(), collidingWall.lastPoint()).normalize();
       // replace the velocity with its part parallel to the wall; i.e., kill its normal part
       // redirect momentum to be parallel to the colliding wall
-      vel = wallAsVector.times(Math.signum(Vector2D.dot(vel, wallAsVector))).normalize().times(vel.norm() / 6.0);
+      vel = wallAsVector.times(Math.signum(Vector2D.dot(vel, wallAsVector))).normalize().times(vel.norm() / 4.0);
     }
     pos = pos.plus(move);
   }
@@ -144,9 +144,9 @@ class Agent {
   // It is crucial for synchrony that this is the only function allowed to
   // change nextUpdateTime!
   private void accelerate(double time) {
-    double timeSinceUpdate = time - tLastUpdate;
-    Vector2D acc = myForce.times(myForceWeight).plus(socialForce).times(1/mass); // a = F/m
-    vel = vel.plus(acc.times(timeSinceUpdate)); // dv = a*dt
+
+    Vector2D acc = myForce.times(myForceWeight).plus(socialForce.times(1/numAgents)).times(1/mass); // a = F/m
+    vel = vel.plus(acc.times(time - tLastUpdate)); // dv = a*dt
 
     // Make sure speed is at most maxSpeed
     if (getSpeed() > maxSpeed) vel = vel.normalize().times(maxSpeed);
