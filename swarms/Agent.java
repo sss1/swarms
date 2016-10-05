@@ -21,7 +21,7 @@ class Agent {
 
   // Constant parameters across all agents
   private static final double myForceWeight = 100.0;
-  private static final double noiseFactor = 0.8;
+  private static final double noiseFactor = 0.5;
 
   // Constant agent-specific parameters
   private final double mass, radius, maxSpeed;
@@ -135,7 +135,7 @@ class Agent {
       Vector2D wallAsVector = new Vector2D(collidingWall.firstPoint(), collidingWall.lastPoint()).normalize();
       // replace the velocity with its part parallel to the wall; i.e., kill its normal part
       // redirect momentum to be parallel to the colliding wall
-      vel = wallAsVector.times(Math.signum(Vector2D.dot(vel, wallAsVector))).normalize().times(vel.norm());
+      vel = wallAsVector.times(Math.signum(Vector2D.dot(vel, wallAsVector))).normalize().times(vel.norm() / 6.0);
     }
     pos = pos.plus(move);
   }
@@ -161,6 +161,7 @@ class Agent {
     double xNoise = rand.nextGaussian();
     double yNoise = rand.nextGaussian();
     Vector2D gradient = room.getGradient(pos);
+    assert !Double.isNaN(gradient.norm());
     myForce = gradient.plus((new Vector2D(xNoise, yNoise)).times(noiseFactor * gradient.norm()));
   }
 
