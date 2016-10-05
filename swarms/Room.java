@@ -165,7 +165,9 @@ class Room {
     // Compute all distances to this cell, if we haven't already done so
     if (Double.isInfinite(sourceCell.getDistToCell(sinkCell))) { computeDistancesToCell(sinkCell); }
 
-    return sourceCell.getDistToCell(sinkCell);
+    double distance = sourceCell.getDistToCell(sinkCell);
+    assert distance >= Point2D.distance(source, sink); // By triangle inequality, graph distance is always longer than Euclidean distance
+    return distance;
   }
 
   /**
@@ -179,7 +181,6 @@ class Room {
       iterator.addTraversalListener(new ExitSearchListener());
       while (iterator.hasNext()) { iterator.next(); }
     }
-//    logarithmizeDistance();
     rootDistance();
   }
 
@@ -194,7 +195,7 @@ class Room {
 
   private void rootDistance() {
     for (Cell cell : roomGraph.vertexSet()) {
-      cell.setDistToExit(10*Math.pow(cell.getDistToExit(), 0.75));
+      cell.setDistToExit(Math.pow(cell.getDistToExit(), 0.75));
     }
   }
 
@@ -363,6 +364,16 @@ class Room {
 
   }
 
+  private boolean hasLineOfSight(Cell c1, Cell c2) {
+    LineSegment2D lineBetweenCells = new LineSegment2D(c1.getCoordinates(), c2.getCoordinates());
+    for (LineSegment2D wall : walls) {
+      if (LineSegment2D.intersects(wall, lineBetweenCells)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private class NodeSearchListener extends TraversalListenerAdapter<Cell, CellEdge> {
 
     private Cell targetCell;
@@ -381,15 +392,25 @@ class Room {
       if (targetCell.equals(cell)) { // Base Case: all cells are distance 0.0 from themselves.
         cell.setDistToCell(targetCell, 0.0);
       } else {
-        // Otherwise, distance is based on the neighboring cell that is closest to target cell.
-        // Note that this works because we started the BFS at the target, so any strictly closer
-        // cells have already been visited
-        double minDist = Double.MAX_VALUE;
-        for (Cell neighbor : Graphs.neighborListOf(roomGraph, cell)) {
-          double distanceThroughNeighbor = neighbor.getDistToCell(targetCell) + cell.euclideanDistFrom(neighbor);
-          minDist = Math.min(minDist, distanceThroughNeighbor);
+
+        /* First check if the cell has line of sight (i.e., there are no walls directly between the two cells).
+         In this case, the shortest distance is the Euclidean distance. Otherwise, we compute distance based
+         on the nearest neighbor of the current cell to the targetCell
+         */
+        if (hasLineOfSight(cell, targetCell)) {
+          cell.setDistToCell(targetCell, cell.euclideanDistFrom(targetCell));
+        } else {
+
+          // In this case, distance is based on the neighboring cell that is closest to target cell.
+          // Note that this works because we started the BFS at the target, so any strictly closer
+          // cells have already been visited
+          double minDist = Double.MAX_VALUE;
+          for (Cell neighbor : Graphs.neighborListOf(roomGraph, cell)) {
+            double distanceThroughNeighbor = neighbor.getDistToCell(targetCell) + cell.euclideanDistFrom(neighbor);
+            minDist = Math.min(minDist, distanceThroughNeighbor);
+          }
+          cell.setDistToCell(targetCell, minDist);
         }
-        cell.setDistToCell(targetCell, minDist);
       }
 
     }
@@ -403,7 +424,16 @@ class Room {
       Cell cell = e.getVertex();
       if (exits.contains(cell)) { // base case: all exists are distance 0.0 from exit
         cell.setDistToExit(0.0);
-      } else { // otherwise, distance is based on the neighboring cell that is closest to an exit
+      } else {// otherwise, distance is based on the neighboring cell that is closest to an exit
+
+        // First measure simple Euclidean distance; when the cell has line of sight to an exit, this is more accurate
+        // than the graph distance, which suffers aliasing
+        for (Cell exit : exits) {
+          if (hasLineOfSight(cell, exit)) {
+            cell.setDistToExit(Math.min(cell.getDistToExit(), cell.euclideanDistFrom(exit)));
+          }
+        }
+
         for (Cell neighbor : Graphs.neighborListOf(roomGraph, cell)) {
           double distanceThroughNeighbor = neighbor.getDistToExit() + cell.euclideanDistFrom(neighbor);
           cell.setDistToExit(Math.min(cell.getDistToExit(), distanceThroughNeighbor));
