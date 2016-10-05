@@ -15,31 +15,31 @@ public class SwarmSim {
 
   // Basic simulation parameters
   private static final double simDuration = 250.0; // Time (in seconds) to simulate
-  private static final int numAgents = 200; // Number of agents in the simulation
+  private static final int numAgents = 300; // Number of agents in the simulation
 
   // Parameters determining the size of the room
   private static final Point2D min = new Point2D(0.0, 0.0);   // Bottom left of room rectangle
   private static final Point2D max = new Point2D(50.0, 50.0); // Top right of the room rectangle
-  private static final RoomType roomType = RoomType.GATES8;
+  private static final RoomType roomType = RoomType.BASIC;
 
   // Parameters determining starting positions of agents
-  private static final Point2D agentMin = max.scale(0.01).plus(new Vector2D(0.0, -10.0));  // Bottom left of rectangle in which agents start
+  private static final Point2D agentMin = max.scale(0.01).plus(new Vector2D(0.0, (roomType == RoomType.GATES8) ? -10.0 : 0.0));  // Bottom left of rectangle in which agents start
   private static final Point2D agentMax = max.scale(0.99);  // Top right of rectangle in which agents start
   private static final boolean asymmetricInitialAgentDistribution = false; // Whether the initial distribution of agents is highly asymmetric
 
   // Parameters determining "fineness" of the simulation.
   // These heavily affect runtime, but, beyond a point, shouldn't affect results.
-  // Runtime and memory are O(1/spatialResolution^4), O(1/maxMove)
+  // Runtime and memory are O(1/spatialResolution^4) and O(1/maxMove)
   private static final double maxMove = 0.1;    // Maximum distance an agent can move before needing to be updated
   private static final double frameRate = 1.0;  // Rate at which to save frames for plotting
-  private static final double spatialResolution = 0.7;  // Resolution at which to model the room as a graph; TODO: used to be 0.2
-  private static final double exitBufferDist = 100.0;   // Distance beyond the exits that the room graph should cover
+  private static final double spatialResolution = 0.6;  // Resolution at which to model the room as a graph; TODO: used to be 0.2
+  private static final double exitBufferDist = 2.0;   // Distance beyond the exits that the room graph should cover
 
   // Parameters determining the output of the simulation
 //  private static final String movieFilePath = "/home/painkiller/Desktop/out.mat";   // Output file from which to make MATLAB video
 //  private static final String plotFilePath = "/home/painkiller/Desktop/withoutSpeedAttract.png";
   private static final String movieFilePath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
-  private static final String plotFilePath = "/home/sss1/Desktop/gates8/gates8_obstacle_" + numAgents + "agents_" + simDuration + "seconds.png";
+  private static final String plotFilePath = "/home/sss1/Desktop/gates8/basic_" + numAgents + "agents_" + simDuration + "seconds.png";
   private static final boolean makeMovie = true;
 
   private static final int numTrials = 10; // Number of trials over which to average results and compute error bars
@@ -54,17 +54,17 @@ public class SwarmSim {
   public static void main(String[] args) {
     final double leftDoorWidth = 10.0;
     final double rightDoorWidth = 10.0;
-    final boolean hasObstacle = true;
+    final boolean hasObstacle = false;
 
     ArrayList<XIntervalSeriesCollection> allPlots = new ArrayList<>();
 
     boolean hasOrient = false; boolean hasAttract = false;
     allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No communication", hasOrient, hasAttract));
-    hasOrient = true;
-    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No speed", hasOrient, hasAttract));
     hasOrient = false; hasAttract = true;
-    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No bacterial", hasOrient, hasAttract));
-    hasOrient = true;
+    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No direction", hasOrient, hasAttract));
+//    hasOrient = true; hasAttract = false;
+//    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No speed", hasOrient, hasAttract));
+    hasOrient = true; hasAttract = true;
     allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "Full communication", hasOrient, hasAttract));
 
 
@@ -367,8 +367,8 @@ public class SwarmSim {
     Point2D leftDoorUpper = new Point2D(bottomLeft.x(), topRight.y()/2 + leftDoorWidth/2.0);
     Point2D leftDoorLower = new Point2D(bottomLeft.x(), topRight.y()/2 - leftDoorWidth/2.0);
 
-    room.addExit(new Point2D(min.minus(rightShift).x() + p, max.y()/2));
-    room.addExit(new Point2D(max.plus(rightShift).x() - p, max.y()/2));
+    room.addExit(new Point2D(-0.5, max.y()/2));
+    room.addExit(new Point2D(max.plus(new Vector2D(0.5, 0.0)).x() - p, max.y()/2));
 
     room.addWall(new LineSegment2D(topRight, topLeft)); // top wall
     room.addWall(new LineSegment2D(topLeft, leftDoorUpper)); // upper left wall
@@ -400,11 +400,12 @@ public class SwarmSim {
     }
 
     Point2D pos = agent.getPos();
+    double tolerance = (roomType == RoomType.GATES8) ? Math.max(spatialResolution, 2.2) : 1.0;
 
     // Check outer room boundary
     return !(roomBottomLeft.x() > pos.x() || pos.x() > roomTopRight.x() ||
         roomBottomLeft.y() > pos.y() || pos.y() > roomTopRight.y())
-        && !room.atExit(agent.getPos(), Math.max(spatialResolution, 2.2));
+        && !room.atExit(agent.getPos(), tolerance);
 
   }
 
@@ -422,7 +423,9 @@ public class SwarmSim {
       if (agent.getID() != updatedAgent.getID()) {
 
         // Updated agent pushes away from colliding agents
-        if (Interactions.collision(agent, updatedAgent)) { Interactions.push(updatedAgent, agent); }
+        if (!agent.getExited() && Interactions.collision(agent, updatedAgent)) {
+            Interactions.push(updatedAgent, agent);
+        }
 
         // Updated agent tries to orient with nearby agents
         if (hasOrient) { Interactions.orient(agent, updatedAgent, room); }

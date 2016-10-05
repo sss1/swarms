@@ -63,7 +63,7 @@ class Agent {
     return ID;
   }
 
-  void exit() { exited = true; }
+  void exit() { vel = new Vector2D(0.0, 0.0); exited = true; }
 
   boolean getExited() { return exited; }
 
@@ -85,6 +85,7 @@ class Agent {
 
   // Adds a new social acting upon the agent (e.g., due to a new collision).
   void addForce(Vector2D newForce) {
+    assert !exited; // Shouldn't be adding social forces to agents who have already exited
     socialForce = socialForce.plus(newForce);
   }
 
