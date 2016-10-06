@@ -37,15 +37,13 @@ class Room {
   int numDestsComputed = 0; // TODO: This is a temporary variable for printing; remove it.
 
 
-  Room(Point2D min, Point2D max, double fineness) {
+  Room(Point2D min, Point2D max, double fineness, SwarmSim.RoomType roomType) {
 
     this.min = min;
     this.fineness = fineness;
 
     int nCellsX = 1 + ((int) ((max.x() - min.x()) / fineness));
     int nCellsY = 1 + ((int) ((max.y() - min.y()) / fineness));
-
-    System.out.println("Total number of nodes: " + (nCellsX * nCellsY));
 
     roomGraph = new SimpleGraph<>(CellEdge.class);
 
@@ -58,22 +56,32 @@ class Room {
         double y = min.y() + j * fineness;
         Cell here = new Cell(x, y);
         grid[i][j] = here;
-        roomGraph.addVertex(grid[i][j]);
-        if (i > 0 && j > 0) {
-          Cell topLeft = grid[i - 1][j - 1];
-          roomGraph.addEdge(here, topLeft, new CellEdge(here, topLeft)); // add edge to top-left
-        }
-        if (i > 0) {
-          Cell left = grid[i - 1][j];
-          roomGraph.addEdge(here, left, new CellEdge(here, left)); // add edge to left
-        }
-        if (i > 0 && j < nCellsY - 2) {
-          Cell bottomLeft = grid[i - 1][j + 1];
-          roomGraph.addEdge(here, bottomLeft, new CellEdge(here, bottomLeft)); // add edge to bottom-left
-        }
-        if (j > 0) {
-          Cell top = grid[i][j - 1];
-          roomGraph.addEdge(here, top, new CellEdge(here, top)); // add edge to top
+        if (cellIsInGraph(here, roomType)) {
+          roomGraph.addVertex(grid[i][j]);
+          if (i > 0 && j > 0) {
+            Cell topLeft = grid[i - 1][j - 1];
+            if (cellIsInGraph(topLeft, roomType)) {
+              roomGraph.addEdge(here, topLeft, new CellEdge(here, topLeft)); // add edge to top-left
+            }
+          }
+          if (i > 0) {
+            Cell left = grid[i - 1][j];
+            if (cellIsInGraph(left, roomType)) {
+              roomGraph.addEdge(here, left, new CellEdge(here, left)); // add edge to left
+            }
+          }
+          if (i > 0 && j < nCellsY - 2) {
+            Cell bottomLeft = grid[i - 1][j + 1];
+            if (cellIsInGraph(bottomLeft, roomType)) {
+              roomGraph.addEdge(here, bottomLeft, new CellEdge(here, bottomLeft)); // add edge to bottom-left
+            }
+          }
+          if (j > 0) {
+            Cell top = grid[i][j - 1];
+            if (cellIsInGraph(top, roomType)) {
+              roomGraph.addEdge(here, top, new CellEdge(here, top)); // add edge to top
+            }
+          }
         }
       }
     }
@@ -81,10 +89,33 @@ class Room {
     // The current implementation is not guaranteed to support disconnected graphs.
     assert (new ConnectivityInspector((UndirectedGraph) roomGraph)).isGraphConnected();
 
+    System.out.println("Total number of nodes: " + roomGraph.vertexSet().size());
+
     exits = new ArrayList<>();
     exactExitPositions = new ArrayList<>();
     walls = new ArrayList<>();
 
+  }
+
+  private boolean cellIsInGraph(Cell cell, SwarmSim.RoomType roomType) {
+    if (roomType == SwarmSim.RoomType.BASIC) { return true; }
+
+    Point2D position = cell.getCoordinates();
+    if (position.y() < 30.0 &&
+        position.x() > 40.0 &&
+        (new LineSegment2D(32.0, 7.0, 55.0, 1.0).isInside(position)) &&
+        (new LineSegment2D(39.0, 29.0, 33.0, 5.0)).isInside(position)) {
+      return false;
+    }
+    if (position.y() >= 30.0 &&
+        (new LineSegment2D(60.001, 50.0, 50.001, 30.0).isInside(position))) {
+      return false;
+    }
+    if ((new LineSegment2D(55.001, 0.001, 50.001, -10.0).isInside(position))) {
+      return false;
+    }
+
+    return true;
   }
 
   void addExit(Point2D exitLocation) {
