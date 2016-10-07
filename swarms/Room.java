@@ -33,6 +33,7 @@ class Room {
   private final double fineness;
   private final Point2D min;
   private final Cell[][] grid;
+  private final SwarmSim.RoomType roomType;
 
   int numDestsComputed = 0; // TODO: This is a temporary variable for printing; remove it.
 
@@ -41,6 +42,7 @@ class Room {
 
     this.min = min;
     this.fineness = fineness;
+    this.roomType = roomType;
 
     int nCellsX = 1 + ((int) ((max.x() - min.x()) / fineness));
     int nCellsY = 1 + ((int) ((max.y() - min.y()) / fineness));
@@ -100,20 +102,20 @@ class Room {
   private boolean cellIsInGraph(Cell cell, SwarmSim.RoomType roomType) {
     if (roomType == SwarmSim.RoomType.BASIC) { return true; }
 
-    Point2D position = cell.getCoordinates();
-    if (position.y() < 30.0 &&
-        position.x() > 40.0 &&
-        (new LineSegment2D(32.0, 7.0, 55.0, 1.0).isInside(position)) &&
-        (new LineSegment2D(39.0, 29.0, 33.0, 5.0)).isInside(position)) {
-      return false;
-    }
-    if (position.y() >= 30.0 &&
-        (new LineSegment2D(60.001, 50.0, 50.001, 30.0).isInside(position))) {
-      return false;
-    }
-    if ((new LineSegment2D(55.001, 0.001, 50.001, -10.0).isInside(position))) {
-      return false;
-    }
+//    Point2D position = cell.getCoordinates();
+//    if (position.y() < 29.0 &&
+//        position.x() > 40.0 &&
+//        (new LineSegment2D(32.0, 7.0, 55.0, 1.0).isInside(position)) &&
+//        (new LineSegment2D(39.0, 29.0, 33.0, 5.0)).isInside(position)) {
+//      return false;
+//    }
+//    if (position.y() >= 30.0 &&
+//        (new LineSegment2D(62.001, 50.0, 52.001, 30.0).isInside(position))) {
+//      return false;
+//    }
+//    if ((new LineSegment2D(55.001, 0.001, 50.001, -10.0).isInside(position))) {
+//      return false;
+//    }
 
     return true;
   }
@@ -195,6 +197,9 @@ class Room {
 
     Cell sourceCell = getCellFromPosition(source);
     Cell sinkCell = getCellFromPosition(sink);
+
+    // if cells have line of sight, it's much faster to use Euclidean distance
+    if (hasLineOfSight(sourceCell, sinkCell)) { return Point2D.distance(source, sink); }
 
     // Compute all distances to this cell, if we haven't already done so
     if (Double.isInfinite(sourceCell.getDistToCell(sinkCell))) { computeDistancesToCell(sinkCell); }

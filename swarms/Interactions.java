@@ -37,7 +37,7 @@ class Interactions {
    *  1) The pusher can push against the pushee (repulsion)
    *  2) A moving agent can drag the other agent with them (friction)
    *
-   *  Note that, due to Newton's third law of motion, equal but opposite forces are exerted on the pusher!
+   *  Note that, due to Newton's third law of motion, equal but opposite forces are exerted on the pusher.
    *
    * @param pusher agent doing the pushing
    * @param pushee agent being pushed by the pusher
