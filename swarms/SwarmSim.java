@@ -11,7 +11,7 @@ import java.util.PriorityQueue;
 
 public class SwarmSim {
 
-  private enum RoomType { BASIC, GATES8 }
+  enum RoomType { BASIC, GATES8 }
 
   // Basic simulation parameters
   private static final double simDuration = 250.0; // Time (in seconds) to simulate
@@ -32,8 +32,8 @@ public class SwarmSim {
   // Runtime and memory are O(1/spatialResolution^4) and O(1/maxMove)
   private static final double maxMove = 0.1;    // Maximum distance an agent can move before needing to be updated
   private static final double frameRate = 1.0;  // Rate at which to save frames for plotting
-  private static final double spatialResolution = 0.5;  // Resolution at which to model the room as a graph; TODO: used to be 0.2
-  private static final double exitBufferDist = 2.0;   // Distance beyond the exits that the room graph should cover
+  private static final double spatialResolution = 0.6;  // Resolution at which to model the room as a graph; TODO: used to be 0.2
+  private static final double exitBufferDist = 5.0;   // Distance beyond the exits that the room graph should cover
 
   // Parameters determining the output of the simulation
 //  private static final String movieFilePath = "/home/painkiller/Desktop/out.mat";   // Output file from which to make MATLAB video
@@ -41,7 +41,7 @@ public class SwarmSim {
   private static final boolean makeMovie = true;
   private static final String movieFilePath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
   private static final boolean makePlot = true;
-  private static final String plotFilePath = "/home/sss1/Desktop/gates8/" + roomType + "_" + numAgents + "agents_" + simDuration + "seconds.png";
+  private static final String plotFilePath = "/home/sss1/Desktop/gates8/" + roomType + "_obstacle_" + numAgents + "agents_" + simDuration + "seconds.png";
 
   private static final int numTrials = 10; // Number of trials over which to average results and compute error bars
 
@@ -53,20 +53,23 @@ public class SwarmSim {
 
   @SuppressWarnings("ConstantConditions") // Several constant variables are explicitly named here just for readability
   public static void main(String[] args) {
-    final double leftDoorWidth = 10.0;
-    final double rightDoorWidth = 10.0;
+    final boolean verySmallLeftDoor = true;
+    double leftDoorWidth = (verySmallLeftDoor) ? 0.2 : 10.0;
     final boolean hasObstacle = true;
 
     ArrayList<XIntervalSeriesCollection> allPlots = new ArrayList<>();
 
     boolean hasOrient = false; boolean hasAttract = false;
-    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No communication", hasOrient, hasAttract));
+    allPlots.add(runTrials(leftDoorWidth, hasObstacle, "No communication", hasOrient, hasAttract));
+    if (verySmallLeftDoor) {
+      leftDoorWidth = 2.0;
+    }
     hasOrient = false; hasAttract = true;
-    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No direction", hasOrient, hasAttract));
+    allPlots.add(runTrials(leftDoorWidth, hasObstacle, "No direction", hasOrient, hasAttract));
 //    hasOrient = true; hasAttract = false;
 //    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No speed", hasOrient, hasAttract));
     hasOrient = true; hasAttract = true;
-    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "Full communication", hasOrient, hasAttract));
+    allPlots.add(runTrials(leftDoorWidth, hasObstacle, "Full communication", hasOrient, hasAttract));
 
     if (makePlot) {
       (new Plotter("Test", simDuration)).plotMultiple(allPlots, plotFilePath);
@@ -74,14 +77,13 @@ public class SwarmSim {
   }
 
   private static XIntervalSeriesCollection runTrials(double leftDoorWidth,
-                                                     double rightDoorWidth,
                                                      boolean hasObstacle,
                                                      String label,
                                                      boolean hasOrient,
                                                      boolean hasAttract) {
 
-    System.out.print("Constructing room... ");
-    initializeRoom(leftDoorWidth, rightDoorWidth, hasObstacle);
+    System.out.print("Constructing room: " + roomType + "... ");
+    initializeRoom(leftDoorWidth, hasObstacle);
 
     ArrayList<XYSeries> resultsByTrial = new ArrayList<>(numTrials);
     for (int i = 0; i < numTrials; i++) {
@@ -132,14 +134,12 @@ public class SwarmSim {
       // Get next agent to update from PriorityQueue
       Agent nextAgent = orderedAgents.poll();
       t = nextAgent.getNextUpdateTime();
-//      if (t % 10.0 < 0.002) { System.out.println("The time is " + t + ". Computed " + room.numDestsComputed + " destinations."); } // Print a bit every 10 timesteps
+      if (t % 10.0 < 0.002) { System.out.println("The time is " + t + ". Computed " + room.numDestsComputed + " destinations."); } // Print a bit every 10 timesteps
 
       // Calculate forces, accelerate, move the agent, and update its priority
       nextAgent.update(t, room);
 
-      // Track whether the agent left the room
-      boolean isInRoom = agentIsInRoom(nextAgent);
-      if (isInRoom) {
+      if (agentIsInRoom(nextAgent)) {
 
         // Add new social forces to the agent
         updateSocialForces(agents, nextAgent, hasOrient, hasAttract);
@@ -158,7 +158,7 @@ public class SwarmSim {
 
     }
 
-    System.out.println("Final Simulation time: " + t);
+    System.out.println("Final Simulation time: " + t + ", with " + orderedAgents.size() + " agents remaining.");
 
     // Add a final point to the plot at the last frame
     fractionInRoomOverTime.add(t, getFracInRoom(agents));
@@ -219,12 +219,12 @@ public class SwarmSim {
 
   }
 
-  private static void initializeRoom(double leftDoorWidth, double rightDoorWidth, boolean hasObstacle) {
+  private static void initializeRoom(double leftDoorWidth, boolean hasObstacle) {
 
     if (roomType == RoomType.GATES8) {
       buildGates8(hasObstacle);
     } else if (roomType == RoomType.BASIC) {
-      buildBasic(leftDoorWidth, rightDoorWidth, hasObstacle);
+      buildBasic(leftDoorWidth, hasObstacle);
     }
   }
 
@@ -236,7 +236,7 @@ public class SwarmSim {
     roomBottomLeft = new Point2D(-1.0, -11.0);
     roomTopRight = new Point2D(60.0, 51.0);
 
-    room = new Room(roomBottomLeft, roomTopRight, spatialResolution);
+    room = new Room(roomBottomLeft, roomTopRight, spatialResolution, roomType);
 
     // Construct out walls, going clockwise from top
     room.addWall(new LineSegment2D(0.0, 50.001, 60.0, 50.001)); // main top wall
@@ -320,7 +320,7 @@ public class SwarmSim {
     if (position.y() < 30.0 &&
         (new LineSegment2D(32.0, 5.0, 55.0, 0.0).isInside(position)) &&
         (new LineSegment2D(37.0, 29.0, 31.0, 5.0)).isInside(position)) {
-      return false; // Behind 8807 stairwell
+      return false; // Behind 8800 stairwell
     }
     if (35.0 < position.y() && position.y() < 45.0 &&
         (new LineSegment2D(45.0, 35.0, 50.0, 45.0)).isInside(position) &&
@@ -349,12 +349,13 @@ public class SwarmSim {
    * @param rightDoorWidth size of the right door
    * @param hasObstacle if true, there will be an obstacle in front of the left door
    */
-  private static void buildBasic(double leftDoorWidth, double rightDoorWidth, boolean hasObstacle) {
+  private static void buildBasic(double leftDoorWidth, boolean hasObstacle) {
 
+    double rightDoorWidth = 10.0;
     double p = spatialResolution /10; // small perturbation to prevent endpoint bugs
 
     Vector2D rightShift = new Vector2D(exitBufferDist, 0.0);
-    room = new Room(min.minus(rightShift), max.plus(rightShift), spatialResolution);
+    room = new Room(min.minus(rightShift), max.plus(rightShift), spatialResolution, roomType);
     Point2D topLeft = new Point2D(min.x() - p, max.y() + p);
     Point2D bottomLeft = new Point2D(min.x() - p, min.y() - p);
     Point2D bottomRight = new Point2D(max.x() + p, min.y() - p);
@@ -368,8 +369,8 @@ public class SwarmSim {
     Point2D leftDoorUpper = new Point2D(bottomLeft.x(), topRight.y()/2 + leftDoorWidth/2.0);
     Point2D leftDoorLower = new Point2D(bottomLeft.x(), topRight.y()/2 - leftDoorWidth/2.0);
 
-    room.addExit(new Point2D(-0.5, max.y()/2));
-    room.addExit(new Point2D(max.plus(new Vector2D(0.5, 0.0)).x() - p, max.y()/2));
+    room.addExit(new Point2D(-2.5, max.y()/2));
+    room.addExit(new Point2D(max.plus(new Vector2D(2.5, 0.0)).x() - p, max.y()/2));
 
     room.addWall(new LineSegment2D(topRight, topLeft)); // top wall
     room.addWall(new LineSegment2D(topLeft, leftDoorUpper)); // upper left wall
