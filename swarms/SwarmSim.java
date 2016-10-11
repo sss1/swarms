@@ -61,9 +61,6 @@ public class SwarmSim {
 
     boolean hasOrient = false; boolean hasAttract = false;
     allPlots.add(runTrials(leftDoorWidth, hasObstacle, "No communication", hasOrient, hasAttract));
-    if (verySmallLeftDoor) {
-      leftDoorWidth *= 15.0;
-    }
     hasOrient = false; hasAttract = true;
     allPlots.add(runTrials(leftDoorWidth, hasObstacle, "No direction", hasOrient, hasAttract));
 //    hasOrient = true; hasAttract = false;
