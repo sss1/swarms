@@ -41,7 +41,7 @@ public class SwarmSim {
   private static final boolean makeMovie = true;
   private static final String movieFilePath = "/home/sss1/Desktop/projects/swarms/videos/out.mat";   // Output file from which to make MATLAB video
   private static final boolean makePlot = true;
-  private static final String plotFilePath = "/home/sss1/Desktop/gates8/" + roomType + "_obstacle_" + numAgents + "agents_" + simDuration + "seconds.png";
+  private static final String plotFilePath = "/home/sss1/Desktop/gates8/tmp" + roomType + "_verySmallLeftDoor_" + numAgents + "agents_" + simDuration + "seconds.png";
 
   private static final int numTrials = 10; // Number of trials over which to average results and compute error bars
 
@@ -54,20 +54,20 @@ public class SwarmSim {
   @SuppressWarnings("ConstantConditions") // Several constant variables are explicitly named here just for readability
   public static void main(String[] args) {
     final boolean verySmallLeftDoor = true;
-    double leftDoorWidth = (verySmallLeftDoor) ? 0.2 : 10.0;
-    final boolean hasObstacle = true;
+    double leftDoorWidth = (verySmallLeftDoor) ? 0.1 : 10.0;
+    final boolean hasObstacle = false;
 
     ArrayList<XIntervalSeriesCollection> allPlots = new ArrayList<>();
 
     boolean hasOrient = false; boolean hasAttract = false;
     allPlots.add(runTrials(leftDoorWidth, hasObstacle, "No communication", hasOrient, hasAttract));
     if (verySmallLeftDoor) {
-      leftDoorWidth = 2.0;
+      leftDoorWidth *= 15.0;
     }
     hasOrient = false; hasAttract = true;
     allPlots.add(runTrials(leftDoorWidth, hasObstacle, "No direction", hasOrient, hasAttract));
 //    hasOrient = true; hasAttract = false;
-//    allPlots.add(runTrials(leftDoorWidth, rightDoorWidth, hasObstacle, "No speed", hasOrient, hasAttract));
+//    allPlots.add(runTrials(leftDoorWidth, hasObstacle, "No speed", hasOrient, hasAttract));
     hasOrient = true; hasAttract = true;
     allPlots.add(runTrials(leftDoorWidth, hasObstacle, "Full communication", hasOrient, hasAttract));
 
@@ -88,12 +88,8 @@ public class SwarmSim {
     ArrayList<XYSeries> resultsByTrial = new ArrayList<>(numTrials);
     for (int i = 0; i < numTrials; i++) {
       System.out.print("\n\nRunning trial " + i + " of \"" + label + "\" condition: ");
-      long startTime = System.nanoTime();
 
       resultsByTrial.add(runTrial(label, hasOrient, hasAttract));
-
-      long endTime = System.nanoTime();
-      System.out.println("Took " + ((endTime - startTime)/(Math.pow(10, 9))) + " seconds...");
 
       System.out.println("Computed " + room.numDestsComputed + " destinations.");
 
@@ -114,6 +110,8 @@ public class SwarmSim {
                                    boolean hasOrient,
                                    boolean hasAttract) {
 
+    long startTime = System.nanoTime();
+
     System.out.print("Constructing agents... ");
     initializeAgents();
 
@@ -126,7 +124,7 @@ public class SwarmSim {
 
     XYSeries fractionInRoomOverTime = new XYSeries(label); // legend label of item to plot
 
-    System.out.print("Starting simulation... ");
+    System.out.println("Starting simulation... ");
     // Terminate the simulation when there are no agents left in the room or when the simulation duration has ended;
     // whichever comes first
     while (t < simDuration && !orderedAgents.isEmpty()) {
@@ -134,7 +132,14 @@ public class SwarmSim {
       // Get next agent to update from PriorityQueue
       Agent nextAgent = orderedAgents.poll();
       t = nextAgent.getNextUpdateTime();
-      if (t % 10.0 < 0.002) { System.out.println("The time is " + t + ". Computed " + room.numDestsComputed + " destinations."); } // Print a bit every 10 timesteps
+
+      if (t % 10.0 < 0.002) { // Print an update every 10 timesteps
+        double currentRealTimeInSeconds = (System.nanoTime() - startTime)/(Math.pow(10, 9));
+        System.out.println("Sim time is " + t + "." +
+            " Computed " + room.numDestsComputed + " destinations." +
+            " Took " + currentRealTimeInSeconds + " real seconds. " +
+            getNumInRoom(agents) + " agents remain.");
+      }
 
       // Calculate forces, accelerate, move the agent, and update its priority
       nextAgent.update(t, room);
@@ -160,8 +165,11 @@ public class SwarmSim {
 
     System.out.println("Final Simulation time: " + t + ", with " + orderedAgents.size() + " agents remaining.");
 
-    // Add a final point to the plot at the last frame
-    fractionInRoomOverTime.add(t, getFracInRoom(agents));
+    long endTime = System.nanoTime();
+    System.out.println("Took " + ((endTime - startTime)/(Math.pow(10, 9))) + " seconds...");
+
+//    // Add a final point to the plot at the last frame
+//    fractionInRoomOverTime.add(t, getFracInRoom(agents));
 
     // Export data necessary for movies as .mat file
     if (makeMovie) {
@@ -346,7 +354,6 @@ public class SwarmSim {
   /**
    * Builds a simple rectangular room with two (not necessarily identical) exits (left and right).
    * @param leftDoorWidth size of the left door
-   * @param rightDoorWidth size of the right door
    * @param hasObstacle if true, there will be an obstacle in front of the left door
    */
   private static void buildBasic(double leftDoorWidth, boolean hasObstacle) {

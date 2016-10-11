@@ -18,7 +18,7 @@ class Interactions {
 
   //    Orientation parameters
   private static final double orientRange = 2.0; // Maximum distance between agents at which orientation applies
-  private static final double orientWeight = 1.0; // Multiplicative weight for orientation term
+  private static final double orientWeight = 3.0; // Multiplicative weight for orientation term
 
   //    Speed attraction parameters:
   private static final double speedPenalty = 0.3; // Minimum difference in speeds for speed attraction to apply
@@ -74,7 +74,7 @@ class Interactions {
       return;
     }
     if (room.getDistanceBetween(orientee.getPos(), orientee.getPos()) < orientRange
-        && orientor.getSpeed() - orientee.getSpeed() > speedPenalty) {
+        && orientor.getSpeed() - orientee.getSpeed() > 0.0) {
       orientee.addForce(orientor.getVel().times(orientWeight));
     }
   }

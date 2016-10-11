@@ -21,7 +21,10 @@ class Agent {
 
   // Constant parameters across all agents
   private static final double myForceWeight = 10.0;
-  private static final double noiseFactor = 0.5;
+  // magnitude of noise added to the gradient, relative to size magnitude of gradient
+  private static final double noiseFactor = 0.8;
+  // Scale by which to reduce velocity when colliding with a wall
+  private static final double wallFrictionFactor = 20.0;
 
   // Constant agent-specific parameters
   private final double mass, radius, maxSpeed;
@@ -136,7 +139,7 @@ class Agent {
       Vector2D wallAsVector = new Vector2D(collidingWall.firstPoint(), collidingWall.lastPoint()).normalize();
       // replace the velocity with its part parallel to the wall; i.e., kill its normal part
       // redirect momentum to be parallel to the colliding wall
-      vel = wallAsVector.times(Math.signum(Vector2D.dot(vel, wallAsVector))).normalize().times(vel.norm() / 4.0);
+      vel = wallAsVector.times(Math.signum(Vector2D.dot(vel, wallAsVector))).times(vel.norm()/wallFrictionFactor);
     }
     pos = pos.plus(move);
   }
@@ -158,12 +161,17 @@ class Agent {
 
   // For now, we should label certain cells as exits, and have agents push towards those
   private void updateIndividualForce(Room room) {
-    Random rand = new Random();
-    double xNoise = rand.nextGaussian();
-    double yNoise = rand.nextGaussian();
     Vector2D gradient = room.getGradient(pos);
-    assert !Double.isNaN(gradient.norm());
-    myForce = gradient.plus((new Vector2D(xNoise, yNoise)).times(noiseFactor * gradient.norm()));
+    try {
+      assert !Double.isNaN(gradient.norm());
+    } catch (AssertionError e) {
+      System.out.println("Gradient NaN at " + pos + "!");
+      throw e;
+    }
+    Random rand = new Random();
+    myForce = gradient
+        .plus((new Vector2D(rand.nextGaussian(), rand.nextGaussian()))
+            .times(noiseFactor * gradient.norm()));
   }
 
   private void setNextUpdateTime(double nextUpdateTime) {

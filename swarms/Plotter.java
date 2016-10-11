@@ -65,46 +65,55 @@ class Plotter extends ApplicationFrame {
     final ChartPanel panel = new ChartPanel(chart, true, true, true, true, true);
     panel.setPreferredSize(new java.awt.Dimension(800, 600));
     setContentPane(panel);
-    try { // Try to save chart
-      ChartUtilities.saveChartAsPNG(new File(plotFilePath), chart, 600, 600);
-      System.out.println("Saved plot to " + plotFilePath);
-    } catch (IOException e) {
-      e.printStackTrace();
+    if (plotFilePath != null) {
+      try { // Try to save chart
+        ChartUtilities.saveChartAsPNG(new File(plotFilePath), chart, 600, 600);
+        System.out.println("Saved plot to " + plotFilePath);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
     }
+    // TODO: If plotFilePath is null, just display plot!
   }
 
   static XIntervalSeriesCollection averageTrials(ArrayList<XYSeries> results, String label) {
     int maxLen = 0;
     XIntervalSeries averagedSeries = new XIntervalSeries(label);
-    double yIncrement = 1.0 - ((double) results.get(0).getY(0));
+    System.out.println("Plotting condition " + label + ", with " + results.size() + " values:");
     for(XYSeries series : results) {
       maxLen = Math.max(maxLen, series.getItemCount());
     }
     for (int i = 0; i < maxLen; i++) {
       int numSamples = 0;
-      double sum = 0.0;
+      double xSum = 0.0;
+      double ySum = 0.0;
       for (XYSeries series : results) { // compute pointwise means
         if (series.getItemCount() > i) {
-          sum += (double) (series.getX(i));
+          xSum += (double) series.getX(i);
+          ySum += (double) series.getY(i);
           numSamples++;
         }
       }
-      double mean = sum / numSamples;
+
+      if (numSamples <= results.size() / 2) { break; }
+
+      double xMean = xSum / numSamples;
+      double yMean = ySum / numSamples;
       double sumSquaredDeviations = 0.0;
       for (XYSeries series : results) { // compute pointwise standard deviations
         if (series.getItemCount() > i) {
-          sumSquaredDeviations += Math.pow(((double) series.getX(i)) - mean, 2.0);
+          sumSquaredDeviations += Math.pow(((double) series.getX(i)) - xMean, 2.0);
         }
       }
       double standardDeviation = Math.sqrt(sumSquaredDeviations / numSamples);
       double zScore95 = 1.96; // Number of standard deviations away from mean for a two-sided 95% normal confidence interval
-      double CIRadius = standardDeviation * zScore95; // Math.sqrt(numSamples);
-      double y = 1 - (i + 1) * yIncrement;
-      if (i > 0) { y = Math.min(y, averagedSeries.getYValue(i - 1)); }
-      averagedSeries.add(mean,
-          mean - CIRadius, // lower 95% confidence bound
-          mean + CIRadius, // upper 95% confidence bound
-          y);
+      double CIRadius = standardDeviation * zScore95;
+
+      if (i > 0) { yMean = Math.min(yMean, averagedSeries.getYValue(i - 1)); } // make sure the curve is monotonic
+      averagedSeries.add(xMean,
+          xMean - CIRadius, // lower 95% confidence bound
+          xMean + CIRadius, // upper 95% confidence bound
+          yMean);
     }
     XIntervalSeriesCollection averagedSeriesAsCollection = new XIntervalSeriesCollection();
     averagedSeriesAsCollection.addSeries(averagedSeries);
